@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>草に金かけるな2 - ONLINE RANKING</title>
+    <!-- Firebase SDK (v9 compat) -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+    <!-- html2canvas -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+        
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: #0c100d;
+            color: #e0e0e0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            user-select: none;
+            touch-action: manipulation;
+            padding: calc(6px + env(safe-area-inset-top)) 6px calc(10px + env(safe-area-inset-bottom)) 6px;
+        }
+        
+        #game-container {
+            width: 100%;
+            max-width: 420px;
+            height: 100%;
+            max-height: 720px;
+            background: #141b16;
+            border-radius: 12px;
+            padding: 8px;
+            box-shadow: 0 4px 25px rgba(0,0,0,0.8);
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            border: 1px solid #233526;
+        }
+
+        .header-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 2px;
+        }
+
+        h1 { 
+            color: #00e676; 
+            font-size: 0.95rem;
+            letter-spacing: 0.5px;
+        }
+
+        .header-right {
+            display: flex;
+            gap: 4px;
+            align-items: center;
+        }
+
+        .btn-sub {
+            background: #253328;
+            color: #bbf7d0;
+            font-size: 0.62rem;
+            padding: 3px 6px;
+            border-radius: 6px;
+            border: 1px solid #36533c;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        
+        /* ステータスバー */
+        .status-bar {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 2px;
+            background: #1c261e;
+            padding: 4px;
+            border-radius: 6px;
+            flex-shrink: 0;
+            border: 1px solid #283d2c;
+        }
+        .stat-item { 
+            text-align: center; 
+            font-size: 0.55rem; 
+            color: #8fa895; 
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        .stat-value { font-size: 0.75rem; font-weight: bold; margin-top: 1px; }
+        .timer { color: #ffeb3b; }
+        .money { color: #ffd700; }
+        .danger { color: #ff5252; }
+        .income { color: #69f0ae; }
+        .weed { color: #b9f6ca; }
+
+        .main-content {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            flex: 1;
+            min-height: 0;
+        }
+
+        /* 3x3 グリッド */
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: repeat(3, 1fr);
+            gap: 4px;
+            background: #0d120e;
+            padding: 4px;
+            border-radius: 8px;
+            width: 100%;
+            max-width: 190px;
+            aspect-ratio: 1 / 1; 
+            margin: 0 auto;
+            flex-shrink: 0;
+            border: 1px solid #233827;
+        }
+        .tile {
+            background: #172219;
+            border: 1px dashed #304735;
+            border-radius: 6px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.1s;
+        }
+        .tile:active { background: #223525; }
+        .tile.selected { border: 1.5px solid #ffeb3b; background: #223826; }
+        .tile-icon { font-size: 1.25rem; }
+        .tile-name { font-size: 0.52rem; margin-top: 1px; color: #a5c2ab; text-align: center; white-space: nowrap; }
+
+        /* 操作パネル */
+        .control-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            flex: 1;
+            min-height: 0;
+        }
+
+        .panel-block {
+            background: #172219;
+            padding: 4px 6px;
+            border-radius: 6px;
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+            border: 1px solid #253828;
+        }
+        
+        .panel-block h3 {
+            font-size: 0.6rem;
+            color: #8fa895;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #233827;
+            padding-bottom: 2px;
+        }
+
+        .btn-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 3px;
+        }
+
+        button {
+            width: 100%;
+            padding: 5px 2px;
+            background: #25662a;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 0.62rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            line-height: 1.15;
+        }
+        button:active { filter: brightness(1.2); }
+        button:disabled { background: #2c332d; color: #667268; cursor: not-allowed; }
+        button.btn-unlock { background: #0c548a; }
+        button.btn-danger { background: #a82424; }
+        button.btn-action { background: #37474f; }
+        button.btn-rank { background: #d97706; }
+
+        /* ログエリア */
+        #log {
+            height: 38px;
+            background: #0b0e0c;
+            border-radius: 4px;
+            padding: 3px 6px;
+            font-size: 0.53rem;
+            overflow-y: auto;
+            color: #8fa895;
+            font-family: monospace;
+            flex-shrink: 0;
+            border: 1px solid #1a291d;
+        }
+        .log-entry { margin-bottom: 1px; }
+        .log-warn { color: #fbbf24; }
+        .log-danger { color: #f87171; }
+
+        /* モーダル */
+        .overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85);
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            z-index: 20;
+            padding: 12px;
+        }
+
+        .modal-card {
+            background: #141b16;
+            border: 2px solid #00e676;
+            border-radius: 10px;
+            padding: 12px 14px;
+            width: 95%;
+            max-width: 360px;
+            max-height: 85vh;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .modal-card h2 { font-size: 0.95rem; color: #00e676; text-align: center; }
+
+        /* ランキングテーブル */
+        .rank-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.65rem;
+            color: #d1d5db;
+        }
+        .rank-table th, .rank-table td {
+            padding: 4px;
+            text-align: left;
+            border-bottom: 1px solid #233526;
+        }
+        .rank-table th { color: #6ee7b7; }
+        .rank-gold { color: #facc15; font-weight: bold; }
+        .rank-silver { color: #e5e7eb; font-weight: bold; }
+        .rank-bronze { color: #d97706; font-weight: bold; }
+
+        /* リザルト */
+        #score-card {
+            background: #131a15;
+            border: 2px solid #00e676;
+            border-radius: 10px;
+            padding: 14px;
+            text-align: center;
+            width: 95%;
+            max-width: 320px;
+            margin-bottom: 10px;
+        }
+        #score-card.bust { border-color: #ef4444; }
+        .final-score { font-size: 1.5rem; color: #ffd700; font-weight: bold; margin: 6px 0; }
+        .rank-title { font-size: 0.75rem; color: #69f0ae; margin-bottom: 4px; }
+
+        .name-input-group {
+            display: flex;
+            gap: 6px;
+            width: 95%;
+            max-width: 320px;
+            margin-bottom: 8px;
+        }
+        .name-input-group input {
+            flex: 1;
+            padding: 6px 8px;
+            background: #1a241d;
+            border: 1px solid #3b82f6;
+            border-radius: 4px;
+            color: white;
+            font-size: 0.75rem;
+            outline: none;
+        }
+        .modal-buttons {
+            display: flex;
+            gap: 6px;
+            width: 95%;
+            max-width: 320px;
+        }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <div class="header-row">
+        <h1>草に金かけるな2</h1>
+        <div class="header-right">
+            <button class="btn-sub btn-rank" onclick="openRankingModal()">🏆 ランキング</button>
+            <button class="btn-sub" onclick="openTutorial()">📖 遊び方</button>
+        </div>
+    </div>
+    
+    <div class="status-bar">
+        <div class="stat-item">
+            <span>残り時間</span>
+            <span id="timer" class="stat-value timer">180s</span>
+        </div>
+        <div class="stat-item">
+            <span>所持金</span>
+            <span id="money" class="stat-value money">￥10k</span>
+        </div>
+        <div class="stat-item">
+            <span>収益/s</span>
+            <span id="income" class="stat-value income">￥0</span>
+        </div>
+        <div class="stat-item">
+            <span>在庫</span>
+            <span id="weed-stock" class="stat-value weed">5kg</span>
+        </div>
+        <div class="stat-item">
+            <span>警戒度</span>
+            <span id="suspicion" class="stat-value danger">0%</span>
+        </div>
+    </div>
+
+    <div class="main-content">
+        <div class="grid-container" id="grid"></div>
+
+        <div class="control-panel">
+            <div class="panel-block">
+                <h3>
+                    <span>施設建築メニュー</span>
+                    <span id="selected-info" style="color:#ffeb3b;">マス未選択</span>
+                </h3>
+                <div id="build-container" class="btn-grid"></div>
+                <div id="unlock-container" class="btn-grid" style="margin-top: 3px;"></div>
+            </div>
+
+            <div class="panel-block">
+                <div class="btn-grid">
+                    <button class="btn-action" onclick="buyWeed()">草の仕入れ<br>￥2,000</button>
+                    <button class="btn-danger" onclick="bribePolice()">裏取引(警戒-25%)<br>￥12,000</button>
+                    <button class="btn-action" onclick="demolishFacility()">撤去<br>￥1,000</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="log"></div>
+</div>
+
+<!-- チュートリアルモーダル -->
+<div id="tutorial-overlay" class="overlay">
+    <div class="modal-card">
+        <h2>📖 遊び方 & ルール</h2>
+        <p style="font-size:0.65rem; color:#d1d5db; line-height:1.4;">
+            ・制限時間<b>180秒</b>の1ステージ制！破産せず、警察に踏み込まれずに最高所持金を目指します。<br><br>
+            ・<b>栽培系</b>：草を毎秒自動生産（維持費と警戒度が発生）<br>
+            ・<b>販売系</b>：草を消費して現金を獲得<br>
+            ・<b>偽装系</b>：匂いや監視を誤魔化し、警戒度を低下<br><br>
+            終了時の所持金が全国オンラインランキングに登録されます。
+        </p>
+        <button class="btn-action" onclick="closeTutorial()" style="margin-top:6px; padding:6px;">閉じる</button>
+    </div>
+</div>
+
+<!-- オンラインランキングモーダル -->
+<div id="ranking-overlay" class="overlay">
+    <div class="modal-card">
+        <h2>🏆 全国オンラインランキング (TOP 10)</h2>
+        <div id="ranking-list" style="min-height: 120px; max-height: 250px; overflow-y: auto;">
+            <p style="font-size:0.65rem; text-align:center; color:#9ca3af; margin-top:20px;">ランキング取得中...</p>
+        </div>
+        <button class="btn-action" onclick="closeRankingModal()" style="margin-top:6px; padding:6px;">閉じる</button>
+    </div>
+</div>
+
+<!-- 最終リザルトモーダル -->
+<div id="final-result-overlay" class="overlay">
+    <div id="score-card">
+        <div style="font-size:0.6rem; color:#8fa895; margin-bottom:4px;">180秒サバイバル完走記録</div>
+        <h2 id="result-title">FINAL RESULT</h2>
+        <div id="final-score" class="final-score">￥0</div>
+        <div id="rank-title" class="rank-title">称号: 駆け出し雑草売り</div>
+        <p id="result-desc" style="font-size: 0.65rem; color: #aaa;">最終所持金がランキング対象です。</p>
+    </div>
+
+    <div class="name-input-group">
+        <input type="text" id="player-name-input" maxlength="10" placeholder="プレイヤー名 (最大10文字)">
+        <button id="btn-submit-score" class="btn-rank" style="flex:0 0 80px;" onclick="submitScoreToFirebase()">スコア送信</button>
+    </div>
+
+    <div class="modal-buttons">
+        <button class="btn-sub" onclick="openRankingModal()" style="padding: 8px;">🏆 ランキング閲覧</button>
+        <button onclick="location.reload()" style="padding: 8px;">もう一度</button>
+    </div>
+</div>
+
+<script>
+    /* ==========================================
+       Firebase 設定（kusakane-d82be）
+       ========================================== */
+    const firebaseConfig = {
+        apiKey: "AIzaSyApQ3pr4l5q59-dxbefYAAKKBEhvuTNeWs",
+        authDomain: "kusakane-d82be.firebaseapp.com",
+        projectId: "kusakane-d82be",
+        storageBucket: "kusakane-d82be.firebasestorage.app",
+        messagingSenderId: "322253417763",
+        appId: "1:322253417763:web:9d01f17a53e76c8c063096"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    /* 施設データ定義 */
+    const FACILITIES = {
+        empty: { name: '空き地', icon: '🔲', cost: 0, income: 0, weedConsume: 0, weedProduce: 0, suspicion: 0, unlocked: true },
+        pot: { name: '植木鉢栽培', icon: '🪴', cost: 3000, income: -100, weedConsume: 0, weedProduce: 2, suspicion: 1, unlocked: true },
+        mat: { name: 'ゴザ販売', icon: '🧺', cost: 4000, income: 1200, weedConsume: 1, weedProduce: 0, suspicion: 1, unlocked: true },
+        aroma: { name: 'お香スタンド', icon: '🕯️', cost: 5000, income: -150, weedConsume: 0, weedProduce: 0, suspicion: -2, unlocked: true },
+        hydro: { name: '水耕ラック', icon: '🚿', cost: 25000, unlockCost: 30000, income: -800, weedConsume: 0, weedProduce: 8, suspicion: 3, unlocked: false },
+        delivery: { name: '裏デリバリー', icon: '🛵', cost: 35000, unlockCost: 45000, income: 7500, weedConsume: 3, weedProduce: 0, suspicion: 2, unlocked: false },
+        cafe: { name: 'ダミー珈琲', icon: '☕', cost: 40000, unlockCost: 50000, income: -1200, weedConsume: 0, weedProduce: 0, suspicion: -4, unlocked: false }
+    };
+
+    let gameState = {
+        timeRemaining: 180,
+        gameStarted: false,
+        gameEnded: false,
+        money: 10000,
+        weedStock: 5,
+        suspicion: 0,
+        selectedTile: null,
+        grid: Array(9).fill('empty'),
+        isScoreSubmitted: false
+    };
+
+    let timerInterval = null;
+    let gameLoopInterval = null;
+
+    function init() {
+        const gridEl = document.getElementById('grid');
+        gridEl.innerHTML = '';
+        for (let i = 0; i < 9; i++) {
+            const tile = document.createElement('div');
+            tile.className = 'tile';
+            tile.dataset.index = i;
+            tile.onclick = () => selectTile(i);
+            gridEl.appendChild(tile);
+        }
+        renderBuildMenu();
+        updateUI();
+        log("マスを選んで施設を建築！アクションで180秒スタート！");
+    }
+
+    function startGame() {
+        if (gameState.gameStarted || gameState.gameEnded) return;
+        gameState.gameStarted = true;
+        log("【180秒サバイバル開始】", "log-warn");
+
+        timerInterval = setInterval(() => {
+            gameState.timeRemaining--;
+            document.getElementById('timer').innerText = `${gameState.timeRemaining}s`;
+
+            if (gameState.timeRemaining <= 0) {
+                endGame(false, "SURVIVED!", "180秒間の生き残りに成功しました！");
+            }
+        }, 1000);
+
+        gameLoopInterval = setInterval(gameLoop, 1000);
+    }
+
+    function selectTile(index) {
+        gameState.selectedTile = index;
+        document.querySelectorAll('.tile').forEach((el, i) => {
+            if (i === index) el.classList.add('selected');
+            else el.classList.remove('selected');
+        });
+        const facilityKey = gameState.grid[index];
+        const facility = FACILITIES[facilityKey] || FACILITIES.empty;
+        document.getElementById('selected-info').innerText = `[${index + 1}] ${facility.name}`;
+    }
+
+    function renderBuildMenu() {
+        const buildContainer = document.getElementById('build-container');
+        const unlockContainer = document.getElementById('unlock-container');
+        buildContainer.innerHTML = '';
+        unlockContainer.innerHTML = '';
+
+        Object.keys(FACILITIES).forEach(key => {
+            const f = FACILITIES[key];
+            if (key === 'empty') return;
+
+            if (f.unlocked) {
+                const btn = document.createElement('button');
+                btn.onclick = () => buildFacility(key);
+                btn.innerHTML = `${f.name}<br>￥${formatShort(f.cost)}`;
+                buildContainer.appendChild(btn);
+            } else {
+                const btn = document.createElement('button');
+                btn.className = 'btn-unlock';
+                btn.onclick = () => unlockFacility(key);
+                btn.innerHTML = `🔓 ${f.name}<br>￥${formatShort(f.unlockCost)}`;
+                unlockContainer.appendChild(btn);
+            }
+        });
+    }
+
+    function unlockFacility(type) {
+        startGame();
+        const f = FACILITIES[type];
+        if (gameState.money < f.unlockCost) {
+            log(`開発資金不足 (要: ￥${f.unlockCost.toLocaleString()})`, "log-warn");
+            return;
+        }
+        gameState.money -= f.unlockCost;
+        f.unlocked = true;
+        log(`【${f.name}】開発完了！`, "log-warn");
+        renderBuildMenu();
+        updateUI();
+    }
+
+    function buildFacility(type) {
+        startGame();
+        if (gameState.selectedTile === null) {
+            log("建築するマスを選択してください。", "log-warn");
+            return;
+        }
+        const f = FACILITIES[type];
+        if (gameState.money < f.cost) {
+            log("建築資金不足！", "log-warn");
+            return;
+        }
+        gameState.money -= f.cost;
+        gameState.grid[gameState.selectedTile] = type;
+        log(`${f.name} を設置`);
+        selectTile(gameState.selectedTile);
+        updateUI();
+    }
+
+    function demolishFacility() {
+        startGame();
+        if (gameState.selectedTile === null || gameState.grid[gameState.selectedTile] === 'empty') return;
+        if (gameState.money < 1000) {
+            log("撤去費用不足。", "log-warn");
+            return;
+        }
+        gameState.money -= 1000;
+        gameState.grid[gameState.selectedTile] = 'empty';
+        log(`施設を撤去`);
+        selectTile(gameState.selectedTile);
+        updateUI();
+    }
+
+    function buyWeed() {
+        startGame();
+        if (gameState.money < 2000) {
+            log("仕入れ資金不足。", "log-warn");
+            return;
+        }
+        gameState.money -= 2000;
+        gameState.weedStock += 5;
+        log("草を5kg仕入れました。");
+        updateUI();
+    }
+
+    function bribePolice() {
+        startGame();
+        if (gameState.money < 12000) {
+            log("買収資金不足。", "log-warn");
+            return;
+        }
+        gameState.money -= 12000;
+        gameState.suspicion = Math.max(0, gameState.suspicion - 25);
+        log("警察を買収し警戒度低下。", "log-warn");
+        updateUI();
+    }
+
+    function gameLoop() {
+        if (gameState.gameEnded) return;
+
+        let totalIncome = 0;
+        let totalProduce = 0;
+        let totalConsume = 0;
+        let totalSuspicionDelta = 0;
+
+        gameState.grid.forEach(type => {
+            const f = FACILITIES[type] || FACILITIES.empty;
+            totalProduce += f.weedProduce;
+            totalConsume += f.weedConsume;
+            totalSuspicionDelta += f.suspicion;
+        });
+
+        gameState.weedStock += totalProduce;
+
+        if (gameState.weedStock >= totalConsume) {
+            gameState.weedStock -= totalConsume;
+            gameState.grid.forEach(type => {
+                const f = FACILITIES[type] || FACILITIES.empty;
+                if (f.weedConsume > 0) totalIncome += f.income;
+            });
+        } else if (totalConsume > 0) {
+            log("在庫切れ！販売停止中", "log-warn");
+        }
+
+        gameState.grid.forEach(type => {
+            const f = FACILITIES[type] || FACILITIES.empty;
+            if (f.income < 0) totalIncome += f.income;
+        });
+
+        gameState.money += totalIncome;
+
+        if (gameState.money < 0) {
+            updateUI(totalIncome);
+            endGame(true, "破産！！", "資金ショートにより経営破綻しました。");
+            return;
+        }
+
+        if (totalSuspicionDelta !== 0) {
+            gameState.suspicion = Math.min(100, Math.max(0, gameState.suspicion + totalSuspicionDelta));
+        }
+
+        if (gameState.suspicion >= 100) {
+            endGame(true, "ガサ入れ！！", "警察に摘発されました。");
+            return;
+        }
+
+        updateUI(totalIncome);
+    }
+
+    function endGame(isBust, title, desc) {
+        gameState.gameEnded = true;
+        clearInterval(timerInterval);
+        clearInterval(gameLoopInterval);
+
+        const overlay = document.getElementById('final-result-overlay');
+        const card = document.getElementById('score-card');
+        const finalMoney = isBust ? 0 : gameState.money;
+
+        document.getElementById('result-title').innerText = title;
+        document.getElementById('result-desc').innerText = desc;
+        document.getElementById('final-score').innerText = `￥${finalMoney.toLocaleString()}`;
+
+        if (isBust) {
+            card.classList.add('bust');
+            document.getElementById('rank-title').innerText = "称号: 警察に消された男";
+            document.getElementById('final-score').style.color = "#ef4444";
+        } else {
+            card.classList.remove('bust');
+            document.getElementById('rank-title').innerText = getRankTitle(finalMoney);
+            document.getElementById('final-score').style.color = "#ffd700";
+        }
+
+        overlay.style.display = 'flex';
+    }
+
+    function getRankTitle(score) {
+        if (score >= 2000000) return "称号: 伝説のハーブ大王";
+        if (score >= 1000000) return "称号: 巨大シンジケート首領";
+        if (score >= 500000) return "称号: 敏腕バイヤー";
+        if (score >= 200000) return "称号: 一人前の卸売商人";
+        return "称号: 駆け出し雑草売り";
+    }
+
+    function formatShort(val) {
+        if (Math.abs(val) >= 10000) return `${(val / 10000).toFixed(0)}万`;
+        return `${val.toLocaleString()}`;
+    }
+
+    function updateUI(currentIncome = 0) {
+        const formatMoney = (val) => {
+            if (Math.abs(val) >= 1000000) return `￥${(val / 10000).toFixed(0)}万`;
+            if (Math.abs(val) >= 10000) return `￥${(val / 10000).toFixed(1)}万`;
+            return `￥${val.toLocaleString()}`;
+        };
+
+        document.getElementById('money').innerText = formatMoney(gameState.money);
+        document.getElementById('income').innerText = `${formatMoney(currentIncome)}/s`;
+        document.getElementById('weed-stock').innerText = `${gameState.weedStock}kg`;
+        document.getElementById('suspicion').innerText = `${gameState.suspicion}%`;
+
+        const tiles = document.querySelectorAll('.tile');
+        gameState.grid.forEach((type, i) => {
+            const f = FACILITIES[type] || FACILITIES.empty;
+            tiles[i].innerHTML = `
+                <div class="tile-icon">${f.icon}</div>
+                <div class="tile-name">${f.name}</div>
+            `;
+        });
+    }
+
+    function log(msg, className = "") {
+        const logEl = document.getElementById('log');
+        const entry = document.createElement('div');
+        entry.className = `log-entry ${className}`;
+        entry.innerText = `> ${msg}`;
+        logEl.prepend(entry);
+    }
+
+    /* モーダル制御 */
+    function openTutorial() { document.getElementById('tutorial-overlay').style.display = 'flex'; }
+    function closeTutorial() { document.getElementById('tutorial-overlay').style.display = 'none'; }
+    function closeRankingModal() { document.getElementById('ranking-overlay').style.display = 'none'; }
+
+    /* ==========================================
+       Firebase Firestore ランキング処理
+       ========================================== */
+    async function submitScoreToFirebase() {
+        if (gameState.isScoreSubmitted) {
+            alert("スコアは既に送信済みです。");
+            return;
+        }
+
+        const nameInput = document.getElementById('player-name-input').value.trim();
+        const playerName = nameInput || "名無しの商人";
+        const finalScore = gameState.suspicion >= 100 || gameState.money < 0 ? 0 : gameState.money;
+
+        try {
+            await db.collection("weed_rankings").add({
+                name: playerName,
+                score: finalScore,
+                timestamp: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            alert("スコアを全国ランキングに登録しました！");
+            gameState.isScoreSubmitted = true;
+            document.getElementById('btn-submit-score').disabled = true;
+            openRankingModal();
+        } catch (error) {
+            console.error("Score submit error: ", error);
+            alert("スコア登録に失敗しました。Firestoreのルール設定を確認してください。");
+        }
+    }
+
+    async function openRankingModal() {
+        const overlay = document.getElementById('ranking-overlay');
+        const listEl = document.getElementById('ranking-list');
+        overlay.style.display = 'flex';
+        listEl.innerHTML = '<p style="font-size:0.65rem; text-align:center; color:#9ca3af; margin-top:20px;">ランキング取得中...</p>';
+
+        try {
+            const snapshot = await db.collection("weed_rankings")
+                .orderBy("score", "desc")
+                .limit(10)
+                .get();
+
+            if (snapshot.empty) {
+                listEl.innerHTML = '<p style="font-size:0.65rem; text-align:center; color:#9ca3af; margin-top:20px;">ランキングデータがまだありません。一番乗りを目指そう！</p>';
+                return;
+            }
+
+            let html = '<table class="rank-table"><thead><tr><th>順位</th><th>名前</th><th>最終資金</th></tr></thead><tbody>';
+            let rank = 1;
+            snapshot.forEach(doc => {
+                const data = doc.data();
+                const rankClass = rank === 1 ? 'rank-gold' : rank === 2 ? 'rank-silver' : rank === 3 ? 'rank-bronze' : '';
+                html += `
+                    <tr class="${rankClass}">
+                        <td>${rank}</td>
+                        <td>${escapeHtml(data.name || '名無し')}</td>
+                        <td>￥${(data.score || 0).toLocaleString()}</td>
+                    </tr>
+                `;
+                rank++;
+            });
+            html += '</tbody></table>';
+            listEl.innerHTML = html;
+        } catch (error) {
+            console.error("Error getting rankings: ", error);
+            listEl.innerHTML = '<p style="font-size:0.65rem; text-align:center; color:#ef4444; margin-top:20px;">ランキングの読み込みに失敗しました。<br>Firestoreのルールや接続を確認してください。</p>';
+        }
+    }
+
+    function escapeHtml(str) {
+        return str.replace(/[&<>'"]/g, tag => ({
+            '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
+        }[tag] || tag));
+    }
+
+    window.onload = init;
+</script>
+</body>
+</html>
