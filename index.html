@@ -7,8 +7,6 @@
     <!-- Firebase SDK (v9 compat) -->
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-    <!-- html2canvas -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
         
@@ -31,7 +29,7 @@
             width: 100%;
             max-width: 420px;
             height: 100%;
-            max-height: 720px;
+            max-height: 730px;
             background: #141b16;
             border-radius: 12px;
             padding: 8px;
@@ -40,6 +38,7 @@
             flex-direction: column;
             gap: 6px;
             border: 1px solid #233526;
+            position: relative;
         }
 
         .header-row {
@@ -124,7 +123,7 @@
         }
         .tile {
             background: #172219;
-            border: 1px dashed #304735;
+            border: 1.5px dashed #304735;
             border-radius: 6px;
             display: flex;
             flex-direction: column;
@@ -132,11 +131,23 @@
             align-items: center;
             cursor: pointer;
             transition: all 0.1s;
+            position: relative;
         }
         .tile:active { background: #223525; }
-        .tile.selected { border: 1.5px solid #ffeb3b; background: #223826; }
-        .tile-icon { font-size: 1.25rem; }
+        .tile.selected { border: 2px solid #ffeb3b; background: #223826; }
+        .tile-icon { font-size: 1.3rem; }
         .tile-name { font-size: 0.52rem; margin-top: 1px; color: #a5c2ab; text-align: center; white-space: nowrap; }
+        .tile-timer {
+            position: absolute;
+            top: 2px;
+            right: 3px;
+            font-size: 0.5rem;
+            color: #ff9800;
+            font-weight: bold;
+            background: rgba(0,0,0,0.6);
+            padding: 0 2px;
+            border-radius: 3px;
+        }
 
         /* 操作パネル */
         .control-panel {
@@ -178,7 +189,7 @@
             padding: 5px 2px;
             background: #25662a;
             color: white;
-            border: none;
+            border: 1.5px solid transparent;
             border-radius: 4px;
             cursor: pointer;
             font-weight: bold;
@@ -190,11 +201,22 @@
             line-height: 1.15;
         }
         button:active { filter: brightness(1.2); }
-        button:disabled { background: #2c332d; color: #667268; cursor: not-allowed; }
+        button.selected-item-btn {
+            border-color: #ffeb3b !important;
+            box-shadow: 0 0 6px #ffeb3b;
+        }
+        button:disabled { background: #222b24; color: #556257; cursor: not-allowed; }
         button.btn-unlock { background: #0c548a; }
         button.btn-danger { background: #a82424; }
         button.btn-action { background: #37474f; }
         button.btn-rank { background: #d97706; }
+        button.btn-start {
+            background: #00e676;
+            color: #0c100d;
+            font-size: 0.85rem;
+            padding: 8px;
+            box-shadow: 0 0 10px rgba(0,230,118,0.4);
+        }
 
         /* ログエリア */
         #log {
@@ -212,6 +234,30 @@
         .log-entry { margin-bottom: 1px; }
         .log-warn { color: #fbbf24; }
         .log-danger { color: #f87171; }
+
+        /* カウントダウンオーバーレイ */
+        #countdown-overlay {
+            display: none;
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.75);
+            z-index: 50;
+            border-radius: 12px;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+        }
+        #countdown-num {
+            font-size: 4.5rem;
+            font-weight: bold;
+            color: #00e676;
+            text-shadow: 0 0 20px #00e676;
+            animation: pulse 1s infinite alternate;
+        }
+        @keyframes pulse {
+            0% { transform: scale(0.9); }
+            100% { transform: scale(1.1); }
+        }
 
         /* モーダル */
         .overlay {
@@ -241,7 +287,6 @@
         }
         .modal-card h2 { font-size: 0.95rem; color: #00e676; text-align: center; }
 
-        /* ランキングテーブル */
         .rank-table {
             width: 100%;
             border-collapse: collapse;
@@ -258,7 +303,6 @@
         .rank-silver { color: #e5e7eb; font-weight: bold; }
         .rank-bronze { color: #d97706; font-weight: bold; }
 
-        /* リザルト */
         #score-card {
             background: #131a15;
             border: 2px solid #00e676;
@@ -301,6 +345,10 @@
 <body>
 
 <div id="game-container">
+    <div id="countdown-overlay">
+        <div id="countdown-num">3</div>
+    </div>
+
     <div class="header-row">
         <h1>草に金かけるな2</h1>
         <div class="header-right">
@@ -316,15 +364,15 @@
         </div>
         <div class="stat-item">
             <span>所持金</span>
-            <span id="money" class="stat-value money">￥10k</span>
+            <span id="money" class="stat-value money">10,000G</span>
         </div>
         <div class="stat-item">
             <span>収益/s</span>
-            <span id="income" class="stat-value income">￥0</span>
+            <span id="income" class="stat-value income">0G</span>
         </div>
         <div class="stat-item">
             <span>在庫</span>
-            <span id="weed-stock" class="stat-value weed">5kg</span>
+            <span id="weed-stock" class="stat-value weed">0kg</span>
         </div>
         <div class="stat-item">
             <span>警戒度</span>
@@ -336,20 +384,23 @@
         <div class="grid-container" id="grid"></div>
 
         <div class="control-panel">
+            <div id="start-panel-block" class="panel-block" style="display: block;">
+                <button id="btn-start" class="btn-start" onclick="triggerStartCountdown()">▶ ゲーム開始 (3秒カウント)</button>
+            </div>
+
             <div class="panel-block">
                 <h3>
-                    <span>施設建築メニュー</span>
-                    <span id="selected-info" style="color:#ffeb3b;">マス未選択</span>
+                    <span>施設メニュー</span>
+                    <span id="selected-info" style="color:#ffeb3b;">待機中</span>
                 </h3>
                 <div id="build-container" class="btn-grid"></div>
                 <div id="unlock-container" class="btn-grid" style="margin-top: 3px;"></div>
             </div>
 
             <div class="panel-block">
-                <div class="btn-grid">
-                    <button class="btn-action" onclick="buyWeed()">草の仕入れ<br>￥2,000</button>
-                    <button class="btn-danger" onclick="bribePolice()">裏取引(警戒-25%)<br>￥12,000</button>
-                    <button class="btn-action" onclick="demolishFacility()">撤去<br>￥1,000</button>
+                <div class="btn-grid" style="grid-template-columns: 1fr 1fr;">
+                    <button class="btn-action" onclick="buyWeed()">草の仕入れ<br>2,000G (+3kg)</button>
+                    <button class="btn-danger" onclick="bribePolice()">裏取引<br>15,000G (-20%)</button>
                 </div>
             </div>
         </div>
@@ -363,11 +414,14 @@
     <div class="modal-card">
         <h2>📖 遊び方 & ルール</h2>
         <p style="font-size:0.65rem; color:#d1d5db; line-height:1.4;">
-            ・制限時間<b>180秒</b>の1ステージ制！破産せず、警察に踏み込まれずに最高所持金を目指します。<br><br>
-            ・<b>栽培系</b>：草を毎秒自動生産（維持費と警戒度が発生）<br>
-            ・<b>販売系</b>：草を消費して現金を獲得<br>
-            ・<b>偽装系</b>：匂いや監視を誤魔化し、警戒度を低下<br><br>
-            終了時の所持金が全国オンラインランキングに登録されます。
+            ・制限時間<b>180秒</b>のサバイバル経営ゲーム！<br><br>
+            ・<b>操作ルール</b>：<br>
+            1. アイテムを選んでから空き地を選ぶと「設置」<br>
+            2. 設置済みのマスを選んでからアイテムを選ぶと「入れ替え」<br>
+            ※すでに施設があるマスに新規設置しようとすると警告が出ます。<br><br>
+            ・<b>時限アイテム</b>：<br>
+            🕯️お香、📹監視カメラは設置から<b>10秒で消滅</b>します。<br><br>
+            ・<b>終了条件</b>：180秒完走、資金マイナスで破産、警戒度100%でガサ入れ即終了。
         </p>
         <button class="btn-action" onclick="closeTutorial()" style="margin-top:6px; padding:6px;">閉じる</button>
     </div>
@@ -389,7 +443,7 @@
     <div id="score-card">
         <div style="font-size:0.6rem; color:#8fa895; margin-bottom:4px;">180秒サバイバル完走記録</div>
         <h2 id="result-title">FINAL RESULT</h2>
-        <div id="final-score" class="final-score">￥0</div>
+        <div id="final-score" class="final-score">0G</div>
         <div id="rank-title" class="rank-title">称号: 駆け出し雑草売り</div>
         <p id="result-desc" style="font-size: 0.65rem; color: #aaa;">最終所持金がランキング対象です。</p>
     </div>
@@ -424,12 +478,14 @@
     /* 施設データ定義 */
     const FACILITIES = {
         empty: { name: '空き地', icon: '🔲', cost: 0, income: 0, weedConsume: 0, weedProduce: 0, suspicion: 0, unlocked: true },
-        pot: { name: '植木鉢栽培', icon: '🪴', cost: 3000, income: -100, weedConsume: 0, weedProduce: 2, suspicion: 1, unlocked: true },
-        mat: { name: 'ゴザ販売', icon: '🧺', cost: 4000, income: 1200, weedConsume: 1, weedProduce: 0, suspicion: 1, unlocked: true },
-        aroma: { name: 'お香スタンド', icon: '🕯️', cost: 5000, income: -150, weedConsume: 0, weedProduce: 0, suspicion: -2, unlocked: true },
-        hydro: { name: '水耕ラック', icon: '🚿', cost: 25000, unlockCost: 30000, income: -800, weedConsume: 0, weedProduce: 8, suspicion: 3, unlocked: false },
-        delivery: { name: '裏デリバリー', icon: '🛵', cost: 35000, unlockCost: 45000, income: 7500, weedConsume: 3, weedProduce: 0, suspicion: 2, unlocked: false },
-        cafe: { name: 'ダミー珈琲', icon: '☕', cost: 40000, unlockCost: 50000, income: -1200, weedConsume: 0, weedProduce: 0, suspicion: -4, unlocked: false }
+        // 初期使用可能
+        shop: { name: '個人販売所', icon: '🏪', cost: 3000, income: 1500, weedConsume: 2, weedProduce: 0, suspicion: 2, unlocked: true },
+        kit: { name: '栽培キット', icon: '🌿', cost: 2000, income: 0, weedConsume: 0, weedProduce: 1, suspicion: 1, unlocked: true },
+        incense: { name: 'お香', icon: '🕯️', cost: 5000, income: 0, weedConsume: 0, weedProduce: 0, suspicion: -2, duration: 10, unlocked: true },
+        // 解放施設
+        store: { name: '大型販売店', icon: '🏬', cost: 30000, unlockCost: 50000, income: 4500, weedConsume: 5, weedProduce: 0, suspicion: 3, unlocked: false },
+        factory: { name: '工場生産', icon: '🍁', cost: 15000, unlockCost: 30000, income: 0, weedConsume: 0, weedProduce: 3, suspicion: 2, unlocked: false },
+        camera: { name: '監視カメラ', icon: '📹', cost: 20000, unlockCost: 30000, income: 0, weedConsume: 0, weedProduce: 0, suspicion: -4, duration: 10, unlocked: false }
     };
 
     let gameState = {
@@ -437,10 +493,11 @@
         gameStarted: false,
         gameEnded: false,
         money: 10000,
-        weedStock: 5,
+        weedStock: 0,
         suspicion: 0,
-        selectedTile: null,
-        grid: Array(9).fill('empty'),
+        selectedTile: null,       // 選択中のマスインデックス
+        selectedItem: null,       // 選択中のアイテムID
+        grid: Array(9).fill().map(() => ({ type: 'empty', timer: 0 })),
         isScoreSubmitted: false
     };
 
@@ -454,18 +511,41 @@
             const tile = document.createElement('div');
             tile.className = 'tile';
             tile.dataset.index = i;
-            tile.onclick = () => selectTile(i);
+            tile.onclick = () => onTileClick(i);
             gridEl.appendChild(tile);
         }
-        renderBuildMenu();
+        renderMenus();
         updateUI();
-        log("マスを選んで施設を建築！アクションで180秒スタート！");
+        log("「▶ ゲーム開始」ボタンを押すと3秒カウント後にスタートします！");
     }
 
-    function startGame() {
+    /* カウントダウン開始演出 */
+    function triggerStartCountdown() {
         if (gameState.gameStarted || gameState.gameEnded) return;
+        const overlay = document.getElementById('countdown-overlay');
+        const numEl = document.getElementById('countdown-num');
+        overlay.style.display = 'flex';
+        document.getElementById('start-panel-block').style.display = 'none';
+
+        let count = 3;
+        numEl.innerText = count;
+        const cdTimer = setInterval(() => {
+            count--;
+            if (count > 0) {
+                numEl.innerText = count;
+            } else if (count === 0) {
+                numEl.innerText = "START!";
+            } else {
+                clearInterval(cdTimer);
+                overlay.style.display = 'none';
+                actuallyStartGame();
+            }
+        }, 1000);
+    }
+
+    function actuallyStartGame() {
         gameState.gameStarted = true;
-        log("【180秒サバイバル開始】", "log-warn");
+        log("【180秒サバイバル開始！】", "log-warn");
 
         timerInterval = setInterval(() => {
             gameState.timeRemaining--;
@@ -479,18 +559,128 @@
         gameLoopInterval = setInterval(gameLoop, 1000);
     }
 
-    function selectTile(index) {
-        gameState.selectedTile = index;
+    /* ==========================================
+       操作ロジック（設置・入れ替え・警告）
+       ========================================== */
+    function onTileClick(index) {
+        if (!gameState.gameStarted && !gameState.gameEnded) {
+            log("ゲーム開始ボタンを押してから操作してください。", "log-warn");
+            return;
+        }
+
+        const currentTileData = gameState.grid[index];
+
+        // パターンA: アイテム選択済み -> タイルをクリック
+        if (gameState.selectedItem) {
+            if (currentTileData.type !== 'empty') {
+                log("⚠️ すでに施設が置かれています！(入れ替える場合はマスを選択してからアイテムを選んでください)", "log-danger");
+                return;
+            }
+            // 空き地なので設置実行
+            executeDeploy(index, gameState.selectedItem, false);
+            clearSelection();
+            return;
+        }
+
+        // パターンB: マスの選択
+        if (gameState.selectedTile === index) {
+            // 同じマスを再タップで解除
+            clearSelection();
+        } else {
+            gameState.selectedTile = index;
+            highlightTile(index);
+            const f = FACILITIES[currentTileData.type];
+            document.getElementById('selected-info').innerText = `[${index + 1}] ${f.icon}${f.name}`;
+        }
+    }
+
+    function onItemButtonClick(type) {
+        if (!gameState.gameStarted && !gameState.gameEnded) {
+            log("ゲーム開始ボタンを押してから操作してください。", "log-warn");
+            return;
+        }
+
+        // パターンC: タイル選択済み -> アイテムをクリック（入れ替え or 空き地への設置）
+        if (gameState.selectedTile !== null) {
+            const currentTileData = gameState.grid[gameState.selectedTile];
+            const isSwap = currentTileData.type !== 'empty';
+            executeDeploy(gameState.selectedTile, type, isSwap);
+            clearSelection();
+            return;
+        }
+
+        // パターンD: アイテムの事前選択
+        if (gameState.selectedItem === type) {
+            clearSelection();
+        } else {
+            gameState.selectedItem = type;
+            highlightItemButton(type);
+            const f = FACILITIES[type];
+            document.getElementById('selected-info').innerText = `設置準備: ${f.icon}${f.name}`;
+        }
+    }
+
+    function executeDeploy(tileIndex, itemType, isSwap) {
+        const f = FACILITIES[itemType];
+        if (gameState.money < f.cost) {
+            log(`資金不足！(${formatMoney(f.cost)}必要)`, "log-warn");
+            return;
+        }
+
+        gameState.money -= f.cost;
+        gameState.grid[tileIndex] = {
+            type: itemType,
+            timer: f.duration || 0
+        };
+
+        if (isSwap) {
+            log(`マス[${tileIndex + 1}]を ${f.icon}${f.name} に入れ替えました。`);
+        } else {
+            log(`マス[${tileIndex + 1}]に ${f.icon}${f.name} を設置しました。`);
+        }
+        updateUI();
+    }
+
+    function clearSelection() {
+        gameState.selectedTile = null;
+        gameState.selectedItem = null;
+        highlightTile(null);
+        highlightItemButton(null);
+        document.getElementById('selected-info').innerText = "選択なし";
+    }
+
+    function highlightTile(index) {
         document.querySelectorAll('.tile').forEach((el, i) => {
             if (i === index) el.classList.add('selected');
             else el.classList.remove('selected');
         });
-        const facilityKey = gameState.grid[index];
-        const facility = FACILITIES[facilityKey] || FACILITIES.empty;
-        document.getElementById('selected-info').innerText = `[${index + 1}] ${facility.name}`;
     }
 
-    function renderBuildMenu() {
+    function highlightItemButton(type) {
+        document.querySelectorAll('#build-container button').forEach(btn => {
+            if (btn.dataset.type === type) btn.classList.add('selected-item-btn');
+            else btn.classList.remove('selected-item-btn');
+        });
+    }
+
+    function unlockFacility(type) {
+        if (!gameState.gameStarted && !gameState.gameEnded) {
+            log("ゲーム開始ボタンを押してから操作してください。", "log-warn");
+            return;
+        }
+        const f = FACILITIES[type];
+        if (gameState.money < f.unlockCost) {
+            log(`解放資金不足 (要: ${formatMoney(f.unlockCost)})`, "log-warn");
+            return;
+        }
+        gameState.money -= f.unlockCost;
+        f.unlocked = true;
+        log(`【${f.icon} ${f.name}】の解放に成功！`, "log-warn");
+        renderMenus();
+        updateUI();
+    }
+
+    function renderMenus() {
         const buildContainer = document.getElementById('build-container');
         const unlockContainer = document.getElementById('unlock-container');
         buildContainer.innerHTML = '';
@@ -502,89 +692,47 @@
 
             if (f.unlocked) {
                 const btn = document.createElement('button');
-                btn.onclick = () => buildFacility(key);
-                btn.innerHTML = `${f.name}<br>￥${formatShort(f.cost)}`;
+                btn.dataset.type = key;
+                btn.onclick = () => onItemButtonClick(key);
+                btn.innerHTML = `${f.icon} ${f.name}<br>${formatMoney(f.cost)}`;
                 buildContainer.appendChild(btn);
             } else {
                 const btn = document.createElement('button');
                 btn.className = 'btn-unlock';
                 btn.onclick = () => unlockFacility(key);
-                btn.innerHTML = `🔓 ${f.name}<br>￥${formatShort(f.unlockCost)}`;
+                btn.innerHTML = `🔓 ${f.icon} ${f.name}<br>${formatMoney(f.unlockCost)}`;
                 unlockContainer.appendChild(btn);
             }
         });
     }
 
-    function unlockFacility(type) {
-        startGame();
-        const f = FACILITIES[type];
-        if (gameState.money < f.unlockCost) {
-            log(`開発資金不足 (要: ￥${f.unlockCost.toLocaleString()})`, "log-warn");
-            return;
-        }
-        gameState.money -= f.unlockCost;
-        f.unlocked = true;
-        log(`【${f.name}】開発完了！`, "log-warn");
-        renderBuildMenu();
-        updateUI();
-    }
-
-    function buildFacility(type) {
-        startGame();
-        if (gameState.selectedTile === null) {
-            log("建築するマスを選択してください。", "log-warn");
-            return;
-        }
-        const f = FACILITIES[type];
-        if (gameState.money < f.cost) {
-            log("建築資金不足！", "log-warn");
-            return;
-        }
-        gameState.money -= f.cost;
-        gameState.grid[gameState.selectedTile] = type;
-        log(`${f.name} を設置`);
-        selectTile(gameState.selectedTile);
-        updateUI();
-    }
-
-    function demolishFacility() {
-        startGame();
-        if (gameState.selectedTile === null || gameState.grid[gameState.selectedTile] === 'empty') return;
-        if (gameState.money < 1000) {
-            log("撤去費用不足。", "log-warn");
-            return;
-        }
-        gameState.money -= 1000;
-        gameState.grid[gameState.selectedTile] = 'empty';
-        log(`施設を撤去`);
-        selectTile(gameState.selectedTile);
-        updateUI();
-    }
-
     function buyWeed() {
-        startGame();
+        if (!gameState.gameStarted && !gameState.gameEnded) return;
         if (gameState.money < 2000) {
-            log("仕入れ資金不足。", "log-warn");
+            log("仕入れ資金不足。(2,000G必要)", "log-warn");
             return;
         }
         gameState.money -= 2000;
-        gameState.weedStock += 5;
-        log("草を5kg仕入れました。");
+        gameState.weedStock += 3;
+        log("草を3kg仕入れました。(費用: 2,000G)");
         updateUI();
     }
 
     function bribePolice() {
-        startGame();
-        if (gameState.money < 12000) {
-            log("買収資金不足。", "log-warn");
+        if (!gameState.gameStarted && !gameState.gameEnded) return;
+        if (gameState.money < 15000) {
+            log("裏取引資金不足。(15,000G必要)", "log-warn");
             return;
         }
-        gameState.money -= 12000;
-        gameState.suspicion = Math.max(0, gameState.suspicion - 25);
-        log("警察を買収し警戒度低下。", "log-warn");
+        gameState.money -= 15000;
+        gameState.suspicion = Math.max(0, gameState.suspicion - 20);
+        log("裏取引を実行。警戒度が20%低下！", "log-warn");
         updateUI();
     }
 
+    /* ==========================================
+       毎秒のゲームループ
+       ========================================== */
     function gameLoop() {
         if (gameState.gameEnded) return;
 
@@ -593,30 +741,41 @@
         let totalConsume = 0;
         let totalSuspicionDelta = 0;
 
-        gameState.grid.forEach(type => {
-            const f = FACILITIES[type] || FACILITIES.empty;
+        // 1. 各マスの効果集計 & 時限消滅判定
+        for (let i = 0; i < 9; i++) {
+            const tile = gameState.grid[i];
+            if (tile.type === 'empty') continue;
+
+            const f = FACILITIES[tile.type];
             totalProduce += f.weedProduce;
             totalConsume += f.weedConsume;
             totalSuspicionDelta += f.suspicion;
-        });
 
+            // 時限消滅処理（お香・監視カメラ）
+            if (f.duration) {
+                tile.timer--;
+                if (tile.timer <= 0) {
+                    gameState.grid[i] = { type: 'empty', timer: 0 };
+                    log(`${f.icon} ${f.name} の効果が終了し、消滅しました。`);
+                }
+            }
+        }
+
+        // 2. 在庫の生産
         gameState.weedStock += totalProduce;
 
+        // 3. 在庫の消費と売上
         if (gameState.weedStock >= totalConsume) {
             gameState.weedStock -= totalConsume;
-            gameState.grid.forEach(type => {
-                const f = FACILITIES[type] || FACILITIES.empty;
+            gameState.grid.forEach(tile => {
+                const f = FACILITIES[tile.type];
                 if (f.weedConsume > 0) totalIncome += f.income;
             });
         } else if (totalConsume > 0) {
-            log("在庫切れ！販売停止中", "log-warn");
+            log("⚠️ 在庫切れ！販売が停止しています", "log-warn");
         }
 
-        gameState.grid.forEach(type => {
-            const f = FACILITIES[type] || FACILITIES.empty;
-            if (f.income < 0) totalIncome += f.income;
-        });
-
+        // 4. 所持金と警戒度の更新
         gameState.money += totalIncome;
 
         if (gameState.money < 0) {
@@ -625,9 +784,7 @@
             return;
         }
 
-        if (totalSuspicionDelta !== 0) {
-            gameState.suspicion = Math.min(100, Math.max(0, gameState.suspicion + totalSuspicionDelta));
-        }
+        gameState.suspicion = Math.min(100, Math.max(0, gameState.suspicion + totalSuspicionDelta));
 
         if (gameState.suspicion >= 100) {
             endGame(true, "ガサ入れ！！", "警察に摘発されました。");
@@ -648,7 +805,7 @@
 
         document.getElementById('result-title').innerText = title;
         document.getElementById('result-desc').innerText = desc;
-        document.getElementById('final-score').innerText = `￥${finalMoney.toLocaleString()}`;
+        document.getElementById('final-score').innerText = formatMoney(finalMoney);
 
         if (isBust) {
             card.classList.add('bust');
@@ -671,27 +828,25 @@
         return "称号: 駆け出し雑草売り";
     }
 
-    function formatShort(val) {
-        if (Math.abs(val) >= 10000) return `${(val / 10000).toFixed(0)}万`;
-        return `${val.toLocaleString()}`;
+    function formatMoney(val) {
+        return `${Number(val).toLocaleString()}G`;
     }
 
     function updateUI(currentIncome = 0) {
-        const formatMoney = (val) => {
-            if (Math.abs(val) >= 1000000) return `￥${(val / 10000).toFixed(0)}万`;
-            if (Math.abs(val) >= 10000) return `￥${(val / 10000).toFixed(1)}万`;
-            return `￥${val.toLocaleString()}`;
-        };
-
         document.getElementById('money').innerText = formatMoney(gameState.money);
         document.getElementById('income').innerText = `${formatMoney(currentIncome)}/s`;
         document.getElementById('weed-stock').innerText = `${gameState.weedStock}kg`;
         document.getElementById('suspicion').innerText = `${gameState.suspicion}%`;
 
         const tiles = document.querySelectorAll('.tile');
-        gameState.grid.forEach((type, i) => {
-            const f = FACILITIES[type] || FACILITIES.empty;
+        gameState.grid.forEach((tile, i) => {
+            const f = FACILITIES[tile.type];
+            let timerBadge = '';
+            if (f.duration && tile.timer > 0) {
+                timerBadge = `<div class="tile-timer">${tile.timer}s</div>`;
+            }
             tiles[i].innerHTML = `
+                ${timerBadge}
                 <div class="tile-icon">${f.icon}</div>
                 <div class="tile-name">${f.name}</div>
             `;
@@ -736,7 +891,7 @@
             openRankingModal();
         } catch (error) {
             console.error("Score submit error: ", error);
-            alert("スコア登録に失敗しました。Firestoreのルール設定を確認してください。");
+            alert("スコア登録に失敗しました。Firestoreルール設定を確認してください。");
         }
     }
 
@@ -753,7 +908,7 @@
                 .get();
 
             if (snapshot.empty) {
-                listEl.innerHTML = '<p style="font-size:0.65rem; text-align:center; color:#9ca3af; margin-top:20px;">ランキングデータがまだありません。一番乗りを目指そう！</p>';
+                listEl.innerHTML = '<p style="font-size:0.65rem; text-align:center; color:#9ca3af; margin-top:20px;">ランキングデータがありません</p>';
                 return;
             }
 
@@ -766,7 +921,7 @@
                     <tr class="${rankClass}">
                         <td>${rank}</td>
                         <td>${escapeHtml(data.name || '名無し')}</td>
-                        <td>￥${(data.score || 0).toLocaleString()}</td>
+                        <td>${formatMoney(data.score || 0)}</td>
                     </tr>
                 `;
                 rank++;
@@ -775,7 +930,7 @@
             listEl.innerHTML = html;
         } catch (error) {
             console.error("Error getting rankings: ", error);
-            listEl.innerHTML = '<p style="font-size:0.65rem; text-align:center; color:#ef4444; margin-top:20px;">ランキングの読み込みに失敗しました。<br>Firestoreのルールや接続を確認してください。</p>';
+            listEl.innerHTML = '<p style="font-size:0.65rem; text-align:center; color:#ef4444; margin-top:20px;">ランキングの読み込みに失敗しました。</p>';
         }
     }
 
