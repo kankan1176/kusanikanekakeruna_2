@@ -188,12 +188,18 @@
             box-shadow: 0 0 10px #ffeb3b;
             background: #2e7d32;
         }
-        button:disabled { background: #202722; color: #526054; cursor: not-allowed; border-color: transparent; }
+        button:disabled { 
+            background: #202722 !important; 
+            color: #526054 !important; 
+            cursor: not-allowed !important; 
+            border-color: transparent !important; 
+            box-shadow: none !important;
+            transform: none !important;
+        }
         button.btn-unlock { background: #0c548a; }
         button.btn-danger { background: #991b1b; }
         button.btn-action { background: #37474f; }
         
-        /* 草の仕入れボタン：黄色スタイル */
         button.btn-supply-yellow {
             background: #eab308;
             color: #1a1a1a;
@@ -205,7 +211,6 @@
             filter: brightness(1.05);
         }
 
-        button.btn-rank { background: #d97706; }
         button.btn-start {
             background: #00e676;
             color: #080c09;
@@ -452,7 +457,7 @@
                 <h3><span>⚡ アクション</span></h3>
                 <div class="btn-grid" style="grid-template-columns: 1fr 1fr;">
                     <button class="btn-supply-yellow" onclick="buyWeed()">草の仕入れ<br>¥2,000 (+3kg)</button>
-                    <button class="btn-danger" onclick="bribePolice()">裏取引<br>¥15,000 (-20%)</button>
+                    <button id="btn-bribe" class="btn-danger" onclick="bribePolice()">裏取引<br>¥6,000 (-20%)</button>
                 </div>
             </div>
 
@@ -480,12 +485,13 @@
             2. 設置済みのマスを選んでから施設を選ぶと「入れ替え」<br>
             ※すでに施設があるマスに新規設置しようとすると警告が出ます。<br><br>
             ・<b>施設の特徴と警戒度</b>：<br>
-            🏪<b>個人販売所</b>：2kg消費 ¥1,500/s（2秒毎に警戒+2%）<br>
+            🏪<b>個人販売所</b>：2kg消費 ¥1,500/s（2秒毎に警戒+1%）<br>
             🌿<b>栽培キット</b>：+1kg/s（毎秒警戒+1%）<br>
             🕯️<b>お香</b>：毎秒警戒-3%（<b>10秒で消滅</b>）<br>
-            🏬<b>大型販売店</b>：5kg消費 ¥4,500/s（3秒毎に警戒+3%）<br>
+            🏬<b>大型販売店</b>：5kg消費 ¥4,500/s（2秒毎に警戒+3%）<br>
             🍁<b>工場生産</b>：+3kg/s（毎秒警戒+2%）<br>
             📹<b>監視カメラ</b>：毎秒警戒-10%（<b>20秒で消滅</b>）<br><br>
+            ・<b>裏取引</b>：¥6,000で警戒度-20%（クールタイム3秒）<br><br>
             ・<b>終了条件</b>：<br>
             1. 180秒完走<br>
             2. 警戒度100%でガサ入れ即終了<br>
@@ -541,13 +547,13 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
 
-    /* 施設データ定義 */
+    /* 施設データ定義（警戒度周期の最新バランス適用） */
     const FACILITIES = {
         empty: { name: '空き地', icon: '🔲', cost: 0, income: 0, weedConsume: 0, weedProduce: 0, suspicion: 0, suspicionInterval: 1, unlocked: true },
-        shop: { name: '個人販売所', icon: '🏪', cost: 3000, income: 1500, weedConsume: 2, weedProduce: 0, suspicion: 2, suspicionInterval: 2, unlocked: true },
+        shop: { name: '個人販売所', icon: '🏪', cost: 3000, income: 1500, weedConsume: 2, weedProduce: 0, suspicion: 1, suspicionInterval: 2, unlocked: true },
         kit: { name: '栽培キット', icon: '🌿', cost: 2000, income: 0, weedConsume: 0, weedProduce: 1, suspicion: 1, suspicionInterval: 1, unlocked: true },
         incense: { name: 'お香', icon: '🕯️', cost: 5000, income: 0, weedConsume: 0, weedProduce: 0, suspicion: -3, suspicionInterval: 1, duration: 10, unlocked: true },
-        store: { name: '大型販売店', icon: '🏬', cost: 30000, unlockCost: 50000, income: 4500, weedConsume: 5, weedProduce: 0, suspicion: 3, suspicionInterval: 3, unlocked: false },
+        store: { name: '大型販売店', icon: '🏬', cost: 30000, unlockCost: 50000, income: 4500, weedConsume: 5, weedProduce: 0, suspicion: 3, suspicionInterval: 2, unlocked: false },
         factory: { name: '工場生産', icon: '🍁', cost: 15000, unlockCost: 30000, income: 0, weedConsume: 0, weedProduce: 3, suspicion: 2, suspicionInterval: 1, unlocked: false },
         camera: { name: '監視カメラ', icon: '📹', cost: 20000, unlockCost: 30000, income: 0, weedConsume: 0, weedProduce: 0, suspicion: -10, suspicionInterval: 1, duration: 20, unlocked: false }
     };
@@ -562,6 +568,7 @@
         selectedTile: null,
         selectedItem: null,
         grid: Array(16).fill().map(() => ({ type: 'empty', timer: 0, activeTicks: 0 })),
+        bribeCooldown: 0, // 裏取引クールタイム（秒）
         isScoreSubmitted: false
     };
 
@@ -619,6 +626,12 @@
         timerInterval = setInterval(() => {
             gameState.timeRemaining--;
             document.getElementById('timer').innerText = `${gameState.timeRemaining}s`;
+
+            // クールタイムの秒数管理
+            if (gameState.bribeCooldown > 0) {
+                gameState.bribeCooldown--;
+                updateBribeButton();
+            }
 
             if (gameState.timeRemaining <= 0) {
                 endGame(false, "SURVIVED!", "180秒間の生き残りに成功しました！");
@@ -783,19 +796,36 @@
 
     function bribePolice() {
         if (!gameState.gameStarted && !gameState.gameEnded) return;
-        if (gameState.money < 15000) {
-            log("裏取引資金不足。(¥15,000必要)", "log-warn");
+        if (gameState.bribeCooldown > 0) {
+            log(`裏取引はクールダウン中です (${gameState.bribeCooldown}秒)`, "log-warn");
             return;
         }
-        gameState.money -= 15000;
+        if (gameState.money < 6000) {
+            log("裏取引資金不足。(¥6,000必要)", "log-warn");
+            return;
+        }
+        gameState.money -= 6000;
         gameState.suspicion = Math.max(0, gameState.suspicion - 20);
-        log("裏取引を実行。警戒度が20%低下！", "log-warn");
+        gameState.bribeCooldown = 3; // 3秒のクールタイム設定
+        updateBribeButton();
+        log("裏取引を実行。警戒度が20%低下！(費用: ¥6,000)", "log-warn");
         updateUI();
         checkBankruptcyCondition();
     }
 
+    function updateBribeButton() {
+        const btn = document.getElementById('btn-bribe');
+        if (!btn) return;
+        if (gameState.bribeCooldown > 0) {
+            btn.disabled = true;
+            btn.innerHTML = `裏取引(CT ${gameState.bribeCooldown}s)<br>¥6,000 (-20%)`;
+        } else {
+            btn.disabled = false;
+            btn.innerHTML = `裏取引<br>¥6,000 (-20%)`;
+        }
+    }
+
     function checkBankruptcyCondition() {
-        // 所持金と草の在庫がともに0（以下）なら即座に破産ゲームオーバー
         if (gameState.money <= 0 && gameState.weedStock <= 0) {
             endGame(true, "破産！！", "所持金と草の在庫が尽き、事業継続不能となりました。");
         }
@@ -847,7 +877,6 @@
 
         gameState.money += totalIncome;
 
-        // 所持金＆在庫0チェック
         if (gameState.money <= 0 && gameState.weedStock <= 0) {
             updateUI(totalIncome);
             endGame(true, "破産！！", "所持金と草の在庫が尽き、事業継続不能となりました。");
