@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>草に金かけるな2 - PC WIDE EDITION</title>
+    <title>草に金かけるな2</title>
     <!-- Firebase SDK (v9 compat) -->
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
@@ -59,7 +59,7 @@
 
         .header-right {
             display: flex;
-            gap: 10px;
+            gap: 8px;
             align-items: center;
         }
 
@@ -72,11 +72,27 @@
             border: 1px solid #36533c;
             cursor: pointer;
             font-weight: bold;
+            white-space: nowrap;
             transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
         }
         .btn-sub:hover { background: #2b3f30; filter: brightness(1.1); }
+        .btn-rank-header {
+            background: #d97706;
+            color: #fff;
+            border-color: #b45309;
+        }
+        .btn-rank-header:hover { background: #b45309; }
+        .btn-restart-header {
+            background: #374151;
+            color: #f3f4f6;
+            border-color: #4b5563;
+        }
+        .btn-restart-header:hover { background: #4b5563; }
         
-        /* 上部ステータスバー（PC向けに大型化） */
+        /* 上部ステータスバー */
         .status-bar {
             display: grid;
             grid-template-columns: 1.1fr 1.5fr 1.2fr 1.2fr 1.4fr;
@@ -105,7 +121,7 @@
         .weed { color: #b9f6ca; }
         .danger { color: #ff5252; }
 
-        /* メインボディ（左右分割レイアウト） */
+        /* メインボディ */
         .main-layout {
             display: flex;
             gap: 20px;
@@ -113,7 +129,7 @@
             min-height: 0;
         }
 
-        /* 左カラム：メニュー＆アクション＆ログ */
+        /* 左カラム */
         .left-panel {
             flex: 1.1;
             display: flex;
@@ -176,6 +192,19 @@
         button.btn-unlock { background: #0c548a; }
         button.btn-danger { background: #991b1b; }
         button.btn-action { background: #37474f; }
+        
+        /* 草の仕入れボタン：黄色スタイル */
+        button.btn-supply-yellow {
+            background: #eab308;
+            color: #1a1a1a;
+            border: 1px solid #ca8a04;
+            font-weight: 900;
+        }
+        button.btn-supply-yellow:hover {
+            background: #facc15;
+            filter: brightness(1.05);
+        }
+
         button.btn-rank { background: #d97706; }
         button.btn-start {
             background: #00e676;
@@ -202,7 +231,7 @@
         .log-warn { color: #fbbf24; }
         .log-danger { color: #f87171; }
 
-        /* 右カラム：16マス（4x4）のメインフィールド */
+        /* 右カラム：16マスフィールド */
         .right-panel {
             flex: 1.3;
             background: #0e1410;
@@ -370,14 +399,15 @@
 
     <!-- 上部ヘッダー -->
     <div class="header-row">
-        <h1>🌱 草に金かけるな2 <span style="font-size: 0.8rem; color: #8fa895; font-weight: normal;">(PC WIDE EDITION)</span></h1>
+        <h1>🌱 草に金かけるな2</h1>
         <div class="header-right">
-            <button class="btn-sub btn-rank" onclick="openRankingModal()">🏆 ランキング</button>
+            <button class="btn-sub btn-rank-header" onclick="openRankingModal()">🏆 ランキング</button>
+            <button class="btn-sub btn-restart-header" onclick="confirmRestart()">🔄 リスタート</button>
             <button class="btn-sub" onclick="openTutorial()">📖 遊び方</button>
         </div>
     </div>
     
-    <!-- 上部ステータスバー（PC向けワイド配置） -->
+    <!-- 上部ステータスバー -->
     <div class="status-bar">
         <div class="stat-item">
             <span class="stat-label">残り時間</span>
@@ -401,7 +431,7 @@
         </div>
     </div>
 
-    <!-- メインコンテンツ（左右分割レイアウト） -->
+    <!-- メインコンテンツ -->
     <div class="main-layout">
         <!-- 左側：メニュー・アクション・ログ -->
         <div class="left-panel">
@@ -421,7 +451,7 @@
             <div class="panel-block">
                 <h3><span>⚡ アクション</span></h3>
                 <div class="btn-grid" style="grid-template-columns: 1fr 1fr;">
-                    <button class="btn-action" onclick="buyWeed()">草の仕入れ<br>¥2,000 (+3kg)</button>
+                    <button class="btn-supply-yellow" onclick="buyWeed()">草の仕入れ<br>¥2,000 (+3kg)</button>
                     <button class="btn-danger" onclick="bribePolice()">裏取引<br>¥15,000 (-20%)</button>
                 </div>
             </div>
@@ -456,7 +486,10 @@
             🏬<b>大型販売店</b>：5kg消費 ¥4,500/s（3秒毎に警戒+3%）<br>
             🍁<b>工場生産</b>：+3kg/s（毎秒警戒+2%）<br>
             📹<b>監視カメラ</b>：毎秒警戒-10%（<b>20秒で消滅</b>）<br><br>
-            ・<b>終了条件</b>：180秒完走、資金マイナスで破産、警戒度100%でガサ入れ即終了。
+            ・<b>終了条件</b>：<br>
+            1. 180秒完走<br>
+            2. 警戒度100%でガサ入れ即終了<br>
+            3. <b>所持金と草の在庫がともに0</b>（完全手詰まり）で破産終了
         </p>
         <button class="btn-action" onclick="closeTutorial()" style="margin-top:8px; padding:8px;">閉じる</button>
     </div>
@@ -548,6 +581,12 @@
         renderMenus();
         updateUI();
         log("「▶ ゲーム開始」ボタンを押すと3秒カウント後にスタートします！");
+    }
+
+    function confirmRestart() {
+        if (confirm("ゲームをリセットして最初からやり直しますか？")) {
+            location.reload();
+        }
     }
 
     function triggerStartCountdown() {
@@ -661,6 +700,7 @@
             log(`マス[${tileIndex + 1}]に ${f.icon}${f.name} を設置しました。`);
         }
         updateUI();
+        checkBankruptcyCondition();
     }
 
     function clearSelection() {
@@ -700,6 +740,7 @@
         log(`【${f.icon} ${f.name}】の解放に成功！`, "log-warn");
         renderMenus();
         updateUI();
+        checkBankruptcyCondition();
     }
 
     function renderMenus() {
@@ -750,6 +791,14 @@
         gameState.suspicion = Math.max(0, gameState.suspicion - 20);
         log("裏取引を実行。警戒度が20%低下！", "log-warn");
         updateUI();
+        checkBankruptcyCondition();
+    }
+
+    function checkBankruptcyCondition() {
+        // 所持金と草の在庫がともに0（以下）なら即座に破産ゲームオーバー
+        if (gameState.money <= 0 && gameState.weedStock <= 0) {
+            endGame(true, "破産！！", "所持金と草の在庫が尽き、事業継続不能となりました。");
+        }
     }
 
     function gameLoop() {
@@ -793,14 +842,15 @@
                 if (f.weedConsume > 0) totalIncome += f.income;
             });
         } else if (totalConsume > 0) {
-            log("⚠️️ 在庫切れ！販売が停止しています", "log-warn");
+            log("⚠ 在庫切れ！販売が停止しています", "log-warn");
         }
 
         gameState.money += totalIncome;
 
-        if (gameState.money < 0) {
+        // 所持金＆在庫0チェック
+        if (gameState.money <= 0 && gameState.weedStock <= 0) {
             updateUI(totalIncome);
-            endGame(true, "破産！！", "資金ショートにより経営破綻しました。");
+            endGame(true, "破産！！", "所持金と草の在庫が尽き、事業継続不能となりました。");
             return;
         }
 
@@ -893,7 +943,7 @@
 
         const nameInput = document.getElementById('player-name-input').value.trim();
         const playerName = nameInput || "名無しの商人";
-        const finalScore = gameState.suspicion >= 100 || gameState.money < 0 ? 0 : gameState.money;
+        const finalScore = gameState.suspicion >= 100 || (gameState.money <= 0 && gameState.weedStock <= 0) ? 0 : gameState.money;
 
         try {
             await db.collection("weed_rankings").add({
