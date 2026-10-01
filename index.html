@@ -2,256 +2,274 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>草に金かけるな2 - ONLINE RANKING</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>草に金かけるな2 - PC WIDE EDITION</title>
     <!-- Firebase SDK (v9 compat) -->
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
         
-        html, body {
-            width: 100%;
-            height: 100%;
+        body {
+            width: 100vw;
+            height: 100vh;
             overflow: hidden;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            background-color: #0c100d;
-            color: #e0e0e0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Hiragino Kaku Gothic ProN", Meiryo, sans-serif;
+            background-color: #080c09;
+            color: #f0fdf4;
             display: flex;
             justify-content: center;
             align-items: center;
             user-select: none;
-            touch-action: manipulation;
-            padding: calc(6px + env(safe-area-inset-top)) 6px calc(10px + env(safe-area-inset-bottom)) 6px;
         }
         
         #game-container {
-            width: 100%;
-            max-width: 420px;
-            height: 100%;
-            max-height: 730px;
-            background: #141b16;
-            border-radius: 12px;
-            padding: 8px;
-            box-shadow: 0 4px 25px rgba(0,0,0,0.8);
+            width: 96vw;
+            max-width: 1200px;
+            height: 94vh;
+            max-height: 820px;
+            background: #111713;
+            border-radius: 16px;
+            padding: 16px 20px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.85);
             display: flex;
             flex-direction: column;
-            gap: 6px;
-            border: 1px solid #233526;
+            gap: 14px;
+            border: 1.5px solid #233526;
             position: relative;
         }
 
+        /* ヘッダーエリア */
         .header-row {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 0 2px;
+            border-bottom: 1px solid #1f2e22;
+            padding-bottom: 8px;
         }
 
         h1 { 
             color: #00e676; 
-            font-size: 0.95rem;
-            letter-spacing: 0.5px;
+            font-size: 1.5rem;
+            letter-spacing: 1px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
 
         .header-right {
             display: flex;
-            gap: 4px;
+            gap: 10px;
             align-items: center;
         }
 
         .btn-sub {
-            background: #253328;
+            background: #1e2b21;
             color: #bbf7d0;
-            font-size: 0.62rem;
-            padding: 3px 6px;
-            border-radius: 6px;
+            font-size: 0.85rem;
+            padding: 6px 14px;
+            border-radius: 8px;
             border: 1px solid #36533c;
             cursor: pointer;
             font-weight: bold;
+            transition: all 0.2s;
         }
+        .btn-sub:hover { background: #2b3f30; filter: brightness(1.1); }
         
-        /* ステータスバー */
+        /* 上部ステータスバー（PC向けに大型化） */
         .status-bar {
             display: grid;
-            grid-template-columns: repeat(5, 1fr);
-            gap: 2px;
-            background: #1c261e;
-            padding: 4px;
-            border-radius: 6px;
+            grid-template-columns: 1.1fr 1.5fr 1.2fr 1.2fr 1.4fr;
+            gap: 12px;
+            background: #18221b;
+            padding: 12px 18px;
+            border-radius: 12px;
             flex-shrink: 0;
             border: 1px solid #283d2c;
+            box-shadow: inset 0 2px 6px rgba(0,0,0,0.4);
         }
         .stat-item { 
             text-align: center; 
-            font-size: 0.55rem; 
-            color: #8fa895; 
             display: flex;
             flex-direction: column;
             justify-content: center;
+            border-right: 1px solid #253828;
         }
-        .stat-value { font-size: 0.75rem; font-weight: bold; margin-top: 1px; }
+        .stat-item:last-child { border-right: none; }
+        .stat-label { font-size: 0.75rem; color: #8fa895; font-weight: bold; margin-bottom: 2px; }
+        .stat-value { font-size: 1.35rem; font-weight: 800; font-family: monospace; }
+        
         .timer { color: #ffeb3b; }
         .money { color: #ffd700; }
-        .danger { color: #ff5252; }
         .income { color: #69f0ae; }
         .weed { color: #b9f6ca; }
+        .danger { color: #ff5252; }
 
-        .main-content {
+        /* メインボディ（左右分割レイアウト） */
+        .main-layout {
             display: flex;
-            flex-direction: column;
-            gap: 6px;
+            gap: 20px;
             flex: 1;
             min-height: 0;
         }
 
-        /* 3x3 グリッド */
-        .grid-container {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            grid-template-rows: repeat(3, 1fr);
-            gap: 4px;
-            background: #0d120e;
-            padding: 4px;
-            border-radius: 8px;
-            width: 100%;
-            max-width: 190px;
-            aspect-ratio: 1 / 1; 
-            margin: 0 auto;
-            flex-shrink: 0;
-            border: 1px solid #233827;
-        }
-        .tile {
-            background: #172219;
-            border: 1.5px dashed #304735;
-            border-radius: 6px;
+        /* 左カラム：メニュー＆アクション＆ログ */
+        .left-panel {
+            flex: 1.1;
             display: flex;
             flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            cursor: pointer;
-            transition: all 0.1s;
-            position: relative;
-        }
-        .tile:active { background: #223525; }
-        .tile.selected { border: 2px solid #ffeb3b; background: #223826; }
-        .tile-icon { font-size: 1.3rem; }
-        .tile-name { font-size: 0.52rem; margin-top: 1px; color: #a5c2ab; text-align: center; white-space: nowrap; }
-        .tile-timer {
-            position: absolute;
-            top: 2px;
-            right: 3px;
-            font-size: 0.5rem;
-            color: #ff9800;
-            font-weight: bold;
-            background: rgba(0,0,0,0.6);
-            padding: 0 2px;
-            border-radius: 3px;
-        }
-
-        /* 操作パネル */
-        .control-panel {
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-            flex: 1;
+            gap: 10px;
             min-height: 0;
         }
 
         .panel-block {
-            background: #172219;
-            padding: 4px 6px;
-            border-radius: 6px;
+            background: #162018;
+            padding: 10px 14px;
+            border-radius: 10px;
             display: flex;
             flex-direction: column;
-            gap: 3px;
-            border: 1px solid #253828;
+            gap: 8px;
+            border: 1px solid #243527;
         }
         
         .panel-block h3 {
-            font-size: 0.6rem;
+            font-size: 0.85rem;
             color: #8fa895;
             display: flex;
             justify-content: space-between;
             align-items: center;
             border-bottom: 1px solid #233827;
-            padding-bottom: 2px;
+            padding-bottom: 4px;
         }
 
         .btn-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
-            gap: 3px;
+            gap: 6px;
         }
 
         button {
             width: 100%;
-            padding: 5px 2px;
+            padding: 8px 4px;
             background: #25662a;
             color: white;
-            border: 1.5px solid transparent;
-            border-radius: 4px;
+            border: 2px solid transparent;
+            border-radius: 6px;
             cursor: pointer;
             font-weight: bold;
-            font-size: 0.62rem;
+            font-size: 0.8rem;
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            line-height: 1.15;
+            line-height: 1.25;
+            transition: all 0.15s ease;
         }
-        button:active { filter: brightness(1.2); }
+        button:hover { filter: brightness(1.15); transform: translateY(-1px); }
+        button:active { transform: translateY(1px); }
         button.selected-item-btn {
             border-color: #ffeb3b !important;
-            box-shadow: 0 0 6px #ffeb3b;
+            box-shadow: 0 0 10px #ffeb3b;
+            background: #2e7d32;
         }
-        button:disabled { background: #222b24; color: #556257; cursor: not-allowed; }
+        button:disabled { background: #202722; color: #526054; cursor: not-allowed; border-color: transparent; }
         button.btn-unlock { background: #0c548a; }
-        button.btn-danger { background: #a82424; }
+        button.btn-danger { background: #991b1b; }
         button.btn-action { background: #37474f; }
         button.btn-rank { background: #d97706; }
         button.btn-start {
             background: #00e676;
-            color: #0c100d;
-            font-size: 0.85rem;
-            padding: 8px;
-            box-shadow: 0 0 10px rgba(0,230,118,0.4);
+            color: #080c09;
+            font-size: 1.05rem;
+            padding: 10px;
+            box-shadow: 0 0 15px rgba(0,230,118,0.4);
         }
 
         /* ログエリア */
         #log {
-            height: 38px;
+            flex: 1;
+            min-height: 80px;
             background: #0b0e0c;
-            border-radius: 4px;
-            padding: 3px 6px;
-            font-size: 0.53rem;
+            border-radius: 8px;
+            padding: 8px 10px;
+            font-size: 0.72rem;
             overflow-y: auto;
             color: #8fa895;
             font-family: monospace;
-            flex-shrink: 0;
             border: 1px solid #1a291d;
         }
-        .log-entry { margin-bottom: 1px; }
+        .log-entry { margin-bottom: 2px; }
         .log-warn { color: #fbbf24; }
         .log-danger { color: #f87171; }
+
+        /* 右カラム：16マス（4x4）のメインフィールド */
+        .right-panel {
+            flex: 1.3;
+            background: #0e1410;
+            border-radius: 12px;
+            border: 1.5px solid #233526;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 12px;
+        }
+
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            grid-template-rows: repeat(4, 1fr);
+            gap: 8px;
+            width: 100%;
+            max-width: 500px;
+            aspect-ratio: 1 / 1;
+        }
+
+        .tile {
+            background: #172219;
+            border: 2px dashed #2d4231;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            position: relative;
+        }
+        .tile:hover { background: #202f23; border-color: #4b6b52; }
+        .tile.selected { border: 2.5px solid #ffeb3b; background: #253928; box-shadow: 0 0 12px rgba(255,235,59,0.3); }
+        .tile-icon { font-size: 2rem; }
+        .tile-name { font-size: 0.65rem; margin-top: 3px; color: #a5c2ab; text-align: center; white-space: nowrap; font-weight: bold; }
+        .tile-timer {
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            font-size: 0.65rem;
+            color: #ff9800;
+            font-weight: bold;
+            background: rgba(0,0,0,0.7);
+            padding: 1px 4px;
+            border-radius: 4px;
+            border: 1px solid #ff9800;
+        }
 
         /* カウントダウンオーバーレイ */
         #countdown-overlay {
             display: none;
             position: absolute;
             top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.75);
+            background: rgba(0,0,0,0.8);
             z-index: 50;
-            border-radius: 12px;
+            border-radius: 16px;
             justify-content: center;
             align-items: center;
             flex-direction: column;
         }
         #countdown-num {
-            font-size: 4.5rem;
-            font-weight: bold;
+            font-size: 6rem;
+            font-weight: 900;
             color: #00e676;
-            text-shadow: 0 0 20px #00e676;
+            text-shadow: 0 0 30px #00e676;
             animation: pulse 1s infinite alternate;
         }
         @keyframes pulse {
@@ -268,37 +286,38 @@
             justify-content: center;
             align-items: center;
             flex-direction: column;
-            z-index: 20;
-            padding: 12px;
+            z-index: 100;
+            padding: 20px;
         }
 
         .modal-card {
             background: #141b16;
             border: 2px solid #00e676;
-            border-radius: 10px;
-            padding: 12px 14px;
+            border-radius: 12px;
+            padding: 20px 24px;
             width: 95%;
-            max-width: 360px;
+            max-width: 480px;
             max-height: 85vh;
             overflow-y: auto;
             display: flex;
             flex-direction: column;
-            gap: 8px;
+            gap: 12px;
+            box-shadow: 0 0 30px rgba(0,0,0,0.9);
         }
-        .modal-card h2 { font-size: 0.95rem; color: #00e676; text-align: center; }
+        .modal-card h2 { font-size: 1.2rem; color: #00e676; text-align: center; }
 
         .rank-table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 0.65rem;
+            font-size: 0.8rem;
             color: #d1d5db;
         }
         .rank-table th, .rank-table td {
-            padding: 4px;
+            padding: 6px 8px;
             text-align: left;
             border-bottom: 1px solid #233526;
         }
-        .rank-table th { color: #6ee7b7; }
+        .rank-table th { color: #6ee7b7; font-size: 0.75rem; }
         .rank-gold { color: #facc15; font-weight: bold; }
         .rank-silver { color: #e5e7eb; font-weight: bold; }
         .rank-bronze { color: #d97706; font-weight: bold; }
@@ -306,39 +325,39 @@
         #score-card {
             background: #131a15;
             border: 2px solid #00e676;
-            border-radius: 10px;
-            padding: 14px;
+            border-radius: 12px;
+            padding: 18px;
             text-align: center;
             width: 95%;
-            max-width: 320px;
-            margin-bottom: 10px;
+            max-width: 380px;
+            margin-bottom: 12px;
         }
         #score-card.bust { border-color: #ef4444; }
-        .final-score { font-size: 1.5rem; color: #ffd700; font-weight: bold; margin: 6px 0; }
-        .rank-title { font-size: 0.75rem; color: #69f0ae; margin-bottom: 4px; }
+        .final-score { font-size: 2rem; color: #ffd700; font-weight: bold; margin: 8px 0; font-family: monospace; }
+        .rank-title { font-size: 0.95rem; color: #69f0ae; margin-bottom: 6px; }
 
         .name-input-group {
             display: flex;
-            gap: 6px;
+            gap: 8px;
             width: 95%;
-            max-width: 320px;
-            margin-bottom: 8px;
+            max-width: 380px;
+            margin-bottom: 10px;
         }
         .name-input-group input {
             flex: 1;
-            padding: 6px 8px;
+            padding: 8px 12px;
             background: #1a241d;
             border: 1px solid #3b82f6;
-            border-radius: 4px;
+            border-radius: 6px;
             color: white;
-            font-size: 0.75rem;
+            font-size: 0.85rem;
             outline: none;
         }
         .modal-buttons {
             display: flex;
-            gap: 6px;
+            gap: 8px;
             width: 95%;
-            max-width: 320px;
+            max-width: 380px;
         }
     </style>
 </head>
@@ -349,81 +368,97 @@
         <div id="countdown-num">3</div>
     </div>
 
+    <!-- 上部ヘッダー -->
     <div class="header-row">
-        <h1>草に金かけるな2</h1>
+        <h1>🌱 草に金かけるな2 <span style="font-size: 0.8rem; color: #8fa895; font-weight: normal;">(PC WIDE EDITION)</span></h1>
         <div class="header-right">
             <button class="btn-sub btn-rank" onclick="openRankingModal()">🏆 ランキング</button>
             <button class="btn-sub" onclick="openTutorial()">📖 遊び方</button>
         </div>
     </div>
     
+    <!-- 上部ステータスバー（PC向けワイド配置） -->
     <div class="status-bar">
         <div class="stat-item">
-            <span>残り時間</span>
+            <span class="stat-label">残り時間</span>
             <span id="timer" class="stat-value timer">180s</span>
         </div>
         <div class="stat-item">
-            <span>所持金</span>
-            <span id="money" class="stat-value money">10,000G</span>
+            <span class="stat-label">所持金</span>
+            <span id="money" class="stat-value money">¥10,000</span>
         </div>
         <div class="stat-item">
-            <span>収益/s</span>
-            <span id="income" class="stat-value income">0G</span>
+            <span class="stat-label">毎秒収益</span>
+            <span id="income" class="stat-value income">¥0/s</span>
         </div>
         <div class="stat-item">
-            <span>在庫</span>
+            <span class="stat-label">草の在庫</span>
             <span id="weed-stock" class="stat-value weed">0kg</span>
         </div>
         <div class="stat-item">
-            <span>警戒度</span>
+            <span class="stat-label">警察警戒度</span>
             <span id="suspicion" class="stat-value danger">0%</span>
         </div>
     </div>
 
-    <div class="main-content">
-        <div class="grid-container" id="grid"></div>
-
-        <div class="control-panel">
+    <!-- メインコンテンツ（左右分割レイアウト） -->
+    <div class="main-layout">
+        <!-- 左側：メニュー・アクション・ログ -->
+        <div class="left-panel">
             <div id="start-panel-block" class="panel-block" style="display: block;">
-                <button id="btn-start" class="btn-start" onclick="triggerStartCountdown()">▶ ゲーム開始 (3秒カウント)</button>
+                <button id="btn-start" class="btn-start" onclick="triggerStartCountdown()">▶ ゲーム開始 (3秒カウントダウン)</button>
             </div>
 
             <div class="panel-block">
                 <h3>
-                    <span>施設メニュー</span>
-                    <span id="selected-info" style="color:#ffeb3b;">待機中</span>
+                    <span>📦 施設メニュー</span>
+                    <span id="selected-info" style="color:#ffeb3b; font-weight: bold;">待機中</span>
                 </h3>
                 <div id="build-container" class="btn-grid"></div>
-                <div id="unlock-container" class="btn-grid" style="margin-top: 3px;"></div>
+                <div id="unlock-container" class="btn-grid" style="margin-top: 4px;"></div>
             </div>
 
             <div class="panel-block">
+                <h3><span>⚡ アクション</span></h3>
                 <div class="btn-grid" style="grid-template-columns: 1fr 1fr;">
-                    <button class="btn-action" onclick="buyWeed()">草の仕入れ<br>2,000G (+3kg)</button>
-                    <button class="btn-danger" onclick="bribePolice()">裏取引<br>15,000G (-20%)</button>
+                    <button class="btn-action" onclick="buyWeed()">草の仕入れ<br>¥2,000 (+3kg)</button>
+                    <button class="btn-danger" onclick="bribePolice()">裏取引<br>¥15,000 (-20%)</button>
                 </div>
             </div>
+
+            <div class="panel-block" style="flex: 1; min-height: 0;">
+                <h3><span>📜 運営ログ</span></h3>
+                <div id="log"></div>
+            </div>
+        </div>
+
+        <!-- 右側：16マスフィールド（4x4） -->
+        <div class="right-panel">
+            <div class="grid-container" id="grid"></div>
         </div>
     </div>
-
-    <div id="log"></div>
 </div>
 
 <!-- チュートリアルモーダル -->
 <div id="tutorial-overlay" class="overlay">
     <div class="modal-card">
         <h2>📖 遊び方 & ルール</h2>
-        <p style="font-size:0.65rem; color:#d1d5db; line-height:1.4;">
+        <p style="font-size:0.75rem; color:#d1d5db; line-height:1.5;">
             ・制限時間<b>180秒</b>のサバイバル経営ゲーム！<br><br>
             ・<b>操作ルール</b>：<br>
-            1. アイテムを選んでから空き地を選ぶと「設置」<br>
-            2. 設置済みのマスを選んでからアイテムを選ぶと「入れ替え」<br>
+            1. 左の施設を選んでから空き地を選ぶと「設置」<br>
+            2. 設置済みのマスを選んでから施設を選ぶと「入れ替え」<br>
             ※すでに施設があるマスに新規設置しようとすると警告が出ます。<br><br>
-            ・<b>時限アイテム</b>：<br>
-            🕯️お香、📹監視カメラは設置から<b>10秒で消滅</b>します。<br><br>
+            ・<b>施設の特徴と警戒度</b>：<br>
+            🏪<b>個人販売所</b>：2kg消費 ¥1,500/s（2秒毎に警戒+2%）<br>
+            🌿<b>栽培キット</b>：+1kg/s（毎秒警戒+1%）<br>
+            🕯️<b>お香</b>：毎秒警戒-3%（<b>10秒で消滅</b>）<br>
+            🏬<b>大型販売店</b>：5kg消費 ¥4,500/s（3秒毎に警戒+3%）<br>
+            🍁<b>工場生産</b>：+3kg/s（毎秒警戒+2%）<br>
+            📹<b>監視カメラ</b>：毎秒警戒-10%（<b>20秒で消滅</b>）<br><br>
             ・<b>終了条件</b>：180秒完走、資金マイナスで破産、警戒度100%でガサ入れ即終了。
         </p>
-        <button class="btn-action" onclick="closeTutorial()" style="margin-top:6px; padding:6px;">閉じる</button>
+        <button class="btn-action" onclick="closeTutorial()" style="margin-top:8px; padding:8px;">閉じる</button>
     </div>
 </div>
 
@@ -431,38 +466,36 @@
 <div id="ranking-overlay" class="overlay">
     <div class="modal-card">
         <h2>🏆 全国オンラインランキング (TOP 10)</h2>
-        <div id="ranking-list" style="min-height: 120px; max-height: 250px; overflow-y: auto;">
-            <p style="font-size:0.65rem; text-align:center; color:#9ca3af; margin-top:20px;">ランキング取得中...</p>
+        <div id="ranking-list" style="min-height: 140px; max-height: 260px; overflow-y: auto;">
+            <p style="font-size:0.75rem; text-align:center; color:#9ca3af; margin-top:30px;">ランキング取得中...</p>
         </div>
-        <button class="btn-action" onclick="closeRankingModal()" style="margin-top:6px; padding:6px;">閉じる</button>
+        <button class="btn-action" onclick="closeRankingModal()" style="margin-top:8px; padding:8px;">閉じる</button>
     </div>
 </div>
 
 <!-- 最終リザルトモーダル -->
 <div id="final-result-overlay" class="overlay">
     <div id="score-card">
-        <div style="font-size:0.6rem; color:#8fa895; margin-bottom:4px;">180秒サバイバル完走記録</div>
+        <div style="font-size:0.7rem; color:#8fa895; margin-bottom:4px;">180秒サバイバル完走記録</div>
         <h2 id="result-title">FINAL RESULT</h2>
-        <div id="final-score" class="final-score">0G</div>
+        <div id="final-score" class="final-score">¥0</div>
         <div id="rank-title" class="rank-title">称号: 駆け出し雑草売り</div>
-        <p id="result-desc" style="font-size: 0.65rem; color: #aaa;">最終所持金がランキング対象です。</p>
+        <p id="result-desc" style="font-size: 0.7rem; color: #aaa;">最終所持金がランキング対象です。</p>
     </div>
 
     <div class="name-input-group">
         <input type="text" id="player-name-input" maxlength="10" placeholder="プレイヤー名 (最大10文字)">
-        <button id="btn-submit-score" class="btn-rank" style="flex:0 0 80px;" onclick="submitScoreToFirebase()">スコア送信</button>
+        <button id="btn-submit-score" class="btn-rank" style="flex:0 0 90px;" onclick="submitScoreToFirebase()">スコア送信</button>
     </div>
 
     <div class="modal-buttons">
-        <button class="btn-sub" onclick="openRankingModal()" style="padding: 8px;">🏆 ランキング閲覧</button>
-        <button onclick="location.reload()" style="padding: 8px;">もう一度</button>
+        <button class="btn-sub" onclick="openRankingModal()" style="padding: 10px;">🏆 ランキング閲覧</button>
+        <button onclick="location.reload()" style="padding: 10px;">もう一度</button>
     </div>
 </div>
 
 <script>
-    /* ==========================================
-       Firebase 設定（kusakane-d82be）
-       ========================================== */
+    /* Firebase 設定 */
     const firebaseConfig = {
         apiKey: "AIzaSyApQ3pr4l5q59-dxbefYAAKKBEhvuTNeWs",
         authDomain: "kusakane-d82be.firebaseapp.com",
@@ -477,15 +510,13 @@
 
     /* 施設データ定義 */
     const FACILITIES = {
-        empty: { name: '空き地', icon: '🔲', cost: 0, income: 0, weedConsume: 0, weedProduce: 0, suspicion: 0, unlocked: true },
-        // 初期使用可能
-        shop: { name: '個人販売所', icon: '🏪', cost: 3000, income: 1500, weedConsume: 2, weedProduce: 0, suspicion: 2, unlocked: true },
-        kit: { name: '栽培キット', icon: '🌿', cost: 2000, income: 0, weedConsume: 0, weedProduce: 1, suspicion: 1, unlocked: true },
-        incense: { name: 'お香', icon: '🕯️', cost: 5000, income: 0, weedConsume: 0, weedProduce: 0, suspicion: -2, duration: 10, unlocked: true },
-        // 解放施設
-        store: { name: '大型販売店', icon: '🏬', cost: 30000, unlockCost: 50000, income: 4500, weedConsume: 5, weedProduce: 0, suspicion: 3, unlocked: false },
-        factory: { name: '工場生産', icon: '🍁', cost: 15000, unlockCost: 30000, income: 0, weedConsume: 0, weedProduce: 3, suspicion: 2, unlocked: false },
-        camera: { name: '監視カメラ', icon: '📹', cost: 20000, unlockCost: 30000, income: 0, weedConsume: 0, weedProduce: 0, suspicion: -4, duration: 10, unlocked: false }
+        empty: { name: '空き地', icon: '🔲', cost: 0, income: 0, weedConsume: 0, weedProduce: 0, suspicion: 0, suspicionInterval: 1, unlocked: true },
+        shop: { name: '個人販売所', icon: '🏪', cost: 3000, income: 1500, weedConsume: 2, weedProduce: 0, suspicion: 2, suspicionInterval: 2, unlocked: true },
+        kit: { name: '栽培キット', icon: '🌿', cost: 2000, income: 0, weedConsume: 0, weedProduce: 1, suspicion: 1, suspicionInterval: 1, unlocked: true },
+        incense: { name: 'お香', icon: '🕯️', cost: 5000, income: 0, weedConsume: 0, weedProduce: 0, suspicion: -3, suspicionInterval: 1, duration: 10, unlocked: true },
+        store: { name: '大型販売店', icon: '🏬', cost: 30000, unlockCost: 50000, income: 4500, weedConsume: 5, weedProduce: 0, suspicion: 3, suspicionInterval: 3, unlocked: false },
+        factory: { name: '工場生産', icon: '🍁', cost: 15000, unlockCost: 30000, income: 0, weedConsume: 0, weedProduce: 3, suspicion: 2, suspicionInterval: 1, unlocked: false },
+        camera: { name: '監視カメラ', icon: '📹', cost: 20000, unlockCost: 30000, income: 0, weedConsume: 0, weedProduce: 0, suspicion: -10, suspicionInterval: 1, duration: 20, unlocked: false }
     };
 
     let gameState = {
@@ -495,9 +526,9 @@
         money: 10000,
         weedStock: 0,
         suspicion: 0,
-        selectedTile: null,       // 選択中のマスインデックス
-        selectedItem: null,       // 選択中のアイテムID
-        grid: Array(9).fill().map(() => ({ type: 'empty', timer: 0 })),
+        selectedTile: null,
+        selectedItem: null,
+        grid: Array(16).fill().map(() => ({ type: 'empty', timer: 0, activeTicks: 0 })),
         isScoreSubmitted: false
     };
 
@@ -507,7 +538,7 @@
     function init() {
         const gridEl = document.getElementById('grid');
         gridEl.innerHTML = '';
-        for (let i = 0; i < 9; i++) {
+        for (let i = 0; i < 16; i++) {
             const tile = document.createElement('div');
             tile.className = 'tile';
             tile.dataset.index = i;
@@ -519,7 +550,6 @@
         log("「▶ ゲーム開始」ボタンを押すと3秒カウント後にスタートします！");
     }
 
-    /* カウントダウン開始演出 */
     function triggerStartCountdown() {
         if (gameState.gameStarted || gameState.gameEnded) return;
         const overlay = document.getElementById('countdown-overlay');
@@ -559,9 +589,6 @@
         gameLoopInterval = setInterval(gameLoop, 1000);
     }
 
-    /* ==========================================
-       操作ロジック（設置・入れ替え・警告）
-       ========================================== */
     function onTileClick(index) {
         if (!gameState.gameStarted && !gameState.gameEnded) {
             log("ゲーム開始ボタンを押してから操作してください。", "log-warn");
@@ -570,21 +597,17 @@
 
         const currentTileData = gameState.grid[index];
 
-        // パターンA: アイテム選択済み -> タイルをクリック
         if (gameState.selectedItem) {
             if (currentTileData.type !== 'empty') {
                 log("⚠️ すでに施設が置かれています！(入れ替える場合はマスを選択してからアイテムを選んでください)", "log-danger");
                 return;
             }
-            // 空き地なので設置実行
             executeDeploy(index, gameState.selectedItem, false);
             clearSelection();
             return;
         }
 
-        // パターンB: マスの選択
         if (gameState.selectedTile === index) {
-            // 同じマスを再タップで解除
             clearSelection();
         } else {
             gameState.selectedTile = index;
@@ -600,7 +623,6 @@
             return;
         }
 
-        // パターンC: タイル選択済み -> アイテムをクリック（入れ替え or 空き地への設置）
         if (gameState.selectedTile !== null) {
             const currentTileData = gameState.grid[gameState.selectedTile];
             const isSwap = currentTileData.type !== 'empty';
@@ -609,7 +631,6 @@
             return;
         }
 
-        // パターンD: アイテムの事前選択
         if (gameState.selectedItem === type) {
             clearSelection();
         } else {
@@ -630,7 +651,8 @@
         gameState.money -= f.cost;
         gameState.grid[tileIndex] = {
             type: itemType,
-            timer: f.duration || 0
+            timer: f.duration || 0,
+            activeTicks: 0
         };
 
         if (isSwap) {
@@ -709,19 +731,19 @@
     function buyWeed() {
         if (!gameState.gameStarted && !gameState.gameEnded) return;
         if (gameState.money < 2000) {
-            log("仕入れ資金不足。(2,000G必要)", "log-warn");
+            log("仕入れ資金不足。(¥2,000必要)", "log-warn");
             return;
         }
         gameState.money -= 2000;
         gameState.weedStock += 3;
-        log("草を3kg仕入れました。(費用: 2,000G)");
+        log("草を3kg仕入れました。(費用: ¥2,000)");
         updateUI();
     }
 
     function bribePolice() {
         if (!gameState.gameStarted && !gameState.gameEnded) return;
         if (gameState.money < 15000) {
-            log("裏取引資金不足。(15,000G必要)", "log-warn");
+            log("裏取引資金不足。(¥15,000必要)", "log-warn");
             return;
         }
         gameState.money -= 15000;
@@ -730,9 +752,6 @@
         updateUI();
     }
 
-    /* ==========================================
-       毎秒のゲームループ
-       ========================================== */
     function gameLoop() {
         if (gameState.gameEnded) return;
 
@@ -741,30 +760,32 @@
         let totalConsume = 0;
         let totalSuspicionDelta = 0;
 
-        // 1. 各マスの効果集計 & 時限消滅判定
-        for (let i = 0; i < 9; i++) {
+        for (let i = 0; i < 16; i++) {
             const tile = gameState.grid[i];
             if (tile.type === 'empty') continue;
 
             const f = FACILITIES[tile.type];
+            tile.activeTicks = (tile.activeTicks || 0) + 1;
+
             totalProduce += f.weedProduce;
             totalConsume += f.weedConsume;
-            totalSuspicionDelta += f.suspicion;
 
-            // 時限消滅処理（お香・監視カメラ）
+            const interval = f.suspicionInterval || 1;
+            if (tile.activeTicks % interval === 0) {
+                totalSuspicionDelta += f.suspicion;
+            }
+
             if (f.duration) {
                 tile.timer--;
                 if (tile.timer <= 0) {
-                    gameState.grid[i] = { type: 'empty', timer: 0 };
+                    gameState.grid[i] = { type: 'empty', timer: 0, activeTicks: 0 };
                     log(`${f.icon} ${f.name} の効果が終了し、消滅しました。`);
                 }
             }
         }
 
-        // 2. 在庫の生産
         gameState.weedStock += totalProduce;
 
-        // 3. 在庫の消費と売上
         if (gameState.weedStock >= totalConsume) {
             gameState.weedStock -= totalConsume;
             gameState.grid.forEach(tile => {
@@ -772,10 +793,9 @@
                 if (f.weedConsume > 0) totalIncome += f.income;
             });
         } else if (totalConsume > 0) {
-            log("⚠️ 在庫切れ！販売が停止しています", "log-warn");
+            log("⚠️️ 在庫切れ！販売が停止しています", "log-warn");
         }
 
-        // 4. 所持金と警戒度の更新
         gameState.money += totalIncome;
 
         if (gameState.money < 0) {
@@ -829,7 +849,7 @@
     }
 
     function formatMoney(val) {
-        return `${Number(val).toLocaleString()}G`;
+        return `¥${Number(val).toLocaleString()}`;
     }
 
     function updateUI(currentIncome = 0) {
@@ -861,14 +881,10 @@
         logEl.prepend(entry);
     }
 
-    /* モーダル制御 */
     function openTutorial() { document.getElementById('tutorial-overlay').style.display = 'flex'; }
     function closeTutorial() { document.getElementById('tutorial-overlay').style.display = 'none'; }
     function closeRankingModal() { document.getElementById('ranking-overlay').style.display = 'none'; }
 
-    /* ==========================================
-       Firebase Firestore ランキング処理
-       ========================================== */
     async function submitScoreToFirebase() {
         if (gameState.isScoreSubmitted) {
             alert("スコアは既に送信済みです。");
@@ -899,7 +915,7 @@
         const overlay = document.getElementById('ranking-overlay');
         const listEl = document.getElementById('ranking-list');
         overlay.style.display = 'flex';
-        listEl.innerHTML = '<p style="font-size:0.65rem; text-align:center; color:#9ca3af; margin-top:20px;">ランキング取得中...</p>';
+        listEl.innerHTML = '<p style="font-size:0.75rem; text-align:center; color:#9ca3af; margin-top:30px;">ランキング取得中...</p>';
 
         try {
             const snapshot = await db.collection("weed_rankings")
@@ -908,7 +924,7 @@
                 .get();
 
             if (snapshot.empty) {
-                listEl.innerHTML = '<p style="font-size:0.65rem; text-align:center; color:#9ca3af; margin-top:20px;">ランキングデータがありません</p>';
+                listEl.innerHTML = '<p style="font-size:0.75rem; text-align:center; color:#9ca3af; margin-top:30px;">ランキングデータがありません</p>';
                 return;
             }
 
@@ -930,7 +946,7 @@
             listEl.innerHTML = html;
         } catch (error) {
             console.error("Error getting rankings: ", error);
-            listEl.innerHTML = '<p style="font-size:0.65rem; text-align:center; color:#ef4444; margin-top:20px;">ランキングの読み込みに失敗しました。</p>';
+            listEl.innerHTML = '<p style="font-size:0.75rem; text-align:center; color:#ef4444; margin-top:30px;">ランキングの読み込みに失敗しました。</p>';
         }
     }
 
