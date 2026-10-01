@@ -484,13 +484,13 @@
             1. 左の施設を選んでから空き地を選ぶと「設置」<br>
             2. 設置済みのマスを選んでから施設を選ぶと「入れ替え」<br>
             ※すでに施設があるマスに新規設置しようとすると警告が出ます。<br><br>
-            ・<b>施設の特徴と警戒度</b>：<br>
-            🏪<b>個人販売所</b>：2kg消費 ¥1,500/s（2秒毎に警戒+1%）<br>
+            ・<b>施設の特徴と警戒度（すべて個数分重複計算）</b>：<br>
+            🏪<b>個人販売所</b>：2kg消費 ¥1,500/s（3秒毎に警戒+1%）<br>
             🌿<b>栽培キット</b>：+1kg/s（毎秒警戒+1%）<br>
             🕯️<b>お香</b>：毎秒警戒-3%（<b>10秒で消滅</b>）<br>
-            🏬<b>大型販売店</b>：5kg消費 ¥4,500/s（2秒毎に警戒+3%）<br>
+            🏬<b>大型販売店</b>：5kg消費 ¥4,500/s（3秒毎に警戒+3%）<br>
             🍁<b>工場生産</b>：+3kg/s（毎秒警戒+2%）<br>
-            📹<b>監視カメラ</b>：毎秒警戒-10%（<b>20秒で消滅</b>）<br><br>
+            📹<b>監視カメラ</b>：毎秒警戒-20%（<b>20秒で消滅</b>）<br><br>
             ・<b>裏取引</b>：¥6,000で警戒度-20%（クールタイム3秒）<br><br>
             ・<b>終了条件</b>：<br>
             1. 180秒完走<br>
@@ -547,15 +547,15 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
 
-    /* 施設データ定義（警戒度周期の最新バランス適用） */
+    /* 施設データ定義（最新警戒度・消滅タイマー設定） */
     const FACILITIES = {
         empty: { name: '空き地', icon: '🔲', cost: 0, income: 0, weedConsume: 0, weedProduce: 0, suspicion: 0, suspicionInterval: 1, unlocked: true },
-        shop: { name: '個人販売所', icon: '🏪', cost: 3000, income: 1500, weedConsume: 2, weedProduce: 0, suspicion: 1, suspicionInterval: 2, unlocked: true },
+        shop: { name: '個人販売所', icon: '🏪', cost: 3000, income: 1500, weedConsume: 2, weedProduce: 0, suspicion: 1, suspicionInterval: 3, unlocked: true },
         kit: { name: '栽培キット', icon: '🌿', cost: 2000, income: 0, weedConsume: 0, weedProduce: 1, suspicion: 1, suspicionInterval: 1, unlocked: true },
         incense: { name: 'お香', icon: '🕯️', cost: 5000, income: 0, weedConsume: 0, weedProduce: 0, suspicion: -3, suspicionInterval: 1, duration: 10, unlocked: true },
-        store: { name: '大型販売店', icon: '🏬', cost: 30000, unlockCost: 50000, income: 4500, weedConsume: 5, weedProduce: 0, suspicion: 3, suspicionInterval: 2, unlocked: false },
+        store: { name: '大型販売店', icon: '🏬', cost: 30000, unlockCost: 50000, income: 4500, weedConsume: 5, weedProduce: 0, suspicion: 3, suspicionInterval: 3, unlocked: false },
         factory: { name: '工場生産', icon: '🍁', cost: 15000, unlockCost: 30000, income: 0, weedConsume: 0, weedProduce: 3, suspicion: 2, suspicionInterval: 1, unlocked: false },
-        camera: { name: '監視カメラ', icon: '📹', cost: 20000, unlockCost: 30000, income: 0, weedConsume: 0, weedProduce: 0, suspicion: -10, suspicionInterval: 1, duration: 20, unlocked: false }
+        camera: { name: '監視カメラ', icon: '📹', cost: 20000, unlockCost: 30000, income: 0, weedConsume: 0, weedProduce: 0, suspicion: -20, suspicionInterval: 1, duration: 20, unlocked: false }
     };
 
     let gameState = {
@@ -568,7 +568,7 @@
         selectedTile: null,
         selectedItem: null,
         grid: Array(16).fill().map(() => ({ type: 'empty', timer: 0, activeTicks: 0 })),
-        bribeCooldown: 0, // 裏取引クールタイム（秒）
+        bribeCooldown: 0,
         isScoreSubmitted: false
     };
 
@@ -627,7 +627,6 @@
             gameState.timeRemaining--;
             document.getElementById('timer').innerText = `${gameState.timeRemaining}s`;
 
-            // クールタイムの秒数管理
             if (gameState.bribeCooldown > 0) {
                 gameState.bribeCooldown--;
                 updateBribeButton();
@@ -806,7 +805,7 @@
         }
         gameState.money -= 6000;
         gameState.suspicion = Math.max(0, gameState.suspicion - 20);
-        gameState.bribeCooldown = 3; // 3秒のクールタイム設定
+        gameState.bribeCooldown = 3;
         updateBribeButton();
         log("裏取引を実行。警戒度が20%低下！(費用: ¥6,000)", "log-warn");
         updateUI();
@@ -831,14 +830,17 @@
         }
     }
 
+    /* ========================================================
+       ゲームループ（施設効果はすべて設置個数分そのまま重複計算）
+       ======================================================== */
     function gameLoop() {
         if (gameState.gameEnded) return;
 
-        let totalIncome = 0;
         let totalProduce = 0;
-        let totalConsume = 0;
+        let totalIncome = 0;
         let totalSuspicionDelta = 0;
 
+        // 1. 各マスの稼働Tick加算・生産量・警戒度・時限消滅を個別集計（個数分スタック）
         for (let i = 0; i < 16; i++) {
             const tile = gameState.grid[i];
             if (tile.type === 'empty') continue;
@@ -846,14 +848,16 @@
             const f = FACILITIES[tile.type];
             tile.activeTicks = (tile.activeTicks || 0) + 1;
 
+            // 草の生産量（栽培キット/工場生産が複数あればすべて加算）
             totalProduce += f.weedProduce;
-            totalConsume += f.weedConsume;
 
+            // 警戒度増減（周期ごとに該当施設1つにつき加算/減算）
             const interval = f.suspicionInterval || 1;
             if (tile.activeTicks % interval === 0) {
                 totalSuspicionDelta += f.suspicion;
             }
 
+            // 時限消滅判定（お香10s・監視カメラ20s）
             if (f.duration) {
                 tile.timer--;
                 if (tile.timer <= 0) {
@@ -863,26 +867,43 @@
             }
         }
 
+        // 生産分の在庫を追加
         gameState.weedStock += totalProduce;
 
-        if (gameState.weedStock >= totalConsume) {
-            gameState.weedStock -= totalConsume;
-            gameState.grid.forEach(tile => {
-                const f = FACILITIES[tile.type];
-                if (f.weedConsume > 0) totalIncome += f.income;
-            });
-        } else if (totalConsume > 0) {
-            log("⚠ 在庫切れ！販売が停止しています", "log-warn");
+        // 2. 販売施設ごとの在庫消費と売上判定（在庫がある限り1施設ずつ順番に販売・重複計算）
+        let activeShopCount = 0;
+        let stoppedShopCount = 0;
+
+        for (let i = 0; i < 16; i++) {
+            const tile = gameState.grid[i];
+            if (tile.type === 'empty') continue;
+
+            const f = FACILITIES[tile.type];
+            if (f.weedConsume > 0) {
+                if (gameState.weedStock >= f.weedConsume) {
+                    gameState.weedStock -= f.weedConsume;
+                    totalIncome += f.income;
+                    activeShopCount++;
+                } else {
+                    stoppedShopCount++;
+                }
+            }
+        }
+
+        if (stoppedShopCount > 0) {
+            log(`⚠ 在庫不足！販売施設のうち ${stoppedShopCount}件 が在庫切れで販売停止中`, "log-warn");
         }
 
         gameState.money += totalIncome;
 
+        // 所持金＆在庫0チェック
         if (gameState.money <= 0 && gameState.weedStock <= 0) {
             updateUI(totalIncome);
             endGame(true, "破産！！", "所持金と草の在庫が尽き、事業継続不能となりました。");
             return;
         }
 
+        // 警戒度の適用（重複したデルタ値を反映・0%〜100%範囲）
         gameState.suspicion = Math.min(100, Math.max(0, gameState.suspicion + totalSuspicionDelta));
 
         if (gameState.suspicion >= 100) {
